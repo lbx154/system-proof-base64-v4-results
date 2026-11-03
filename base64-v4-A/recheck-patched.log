@@ -1,0 +1,558 @@
+note: automatically chose triggers for this expression:
+  --> src/../t13-handoff/chunk-lemmas.rs:33:59
+   |
+33 |  requires canonical(i,a,3),canonical(i,b,3),t.len()==256, forall|k:int| 0<=k<64 ==> t[crate::roundtrip_spec::alphabet(k) as int] == k,
+   |                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+  --> src/../t13-handoff/chunk-lemmas.rs:33:87
+   |
+33 |  requires canonical(i,a,3),canonical(i,b,3),t.len()==256, forall|k:int| 0<=k<64 ==> t[crate::roundtrip_spec::alphabet(k) as int] == k,
+   |                                                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+  --> src/../t13-handoff/window-lemmas.rs:32:4
+   |
+32 |    forall|k:int| 0<=k<64 ==> t[crate::roundtrip_spec::alphabet(k) as int] == k,
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+  --> src/../t13-handoff/window-lemmas.rs:32:32
+   |
+32 |    forall|k:int| 0<=k<64 ==> t[crate::roundtrip_spec::alphabet(k) as int] == k,
+   |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/mod.rs:248:13
+    |
+248 |             forall|b: &[u8]| converted(&input, b) ==> encode_pre(b@, old(output_buf)@),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/mod.rs:248:30
+    |
+248 |             forall|b: &[u8]| converted(&input, b) ==> encode_pre(b@, old(output_buf)@),
+    |                              ^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/mod.rs:392:31
+    |
+392 |     requires self.standard(), forall|b: &[u8]| converted(&input, b) ==> decodable(b@, old(output)@),
+    |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/mod.rs:392:48
+    |
+392 |     requires self.standard(), forall|b: &[u8]| converted(&input, b) ==> decodable(b@, old(output)@),
+    |                                                ^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/encode.rs:104:7
+    |
+104 |       assert forall|j:int| 0 <= j < data.len() implies output@[j] == data[j] by {
+    |       ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/encode.rs:104:70
+    |
+104 |       assert forall|j:int| 0 <= j < data.len() implies output@[j] == data[j] by {
+    |                                                                      ^^^^^^^
+
+note: automatically chose triggers for this expression:
+ --> src/../t13-handoff/chunk-lemmas.rs:6:2
+  |
+6 |  forall|k:int| 0<=k<64 ==> t[crate::roundtrip_spec::alphabet(k) as int] == k,
+  |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+ --> src/../t13-handoff/chunk-lemmas.rs:6:30
+  |
+6 |  forall|k:int| 0<=k<64 ==> t[crate::roundtrip_spec::alphabet(k) as int] == k,
+  |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+  --> src/../t13-handoff/chunk-lemmas.rs:43:59
+   |
+43 |  requires canonical(i,a,6),canonical(i,b,6),t.len()==256, forall|k:int| 0<=k<64 ==> t[crate::roundtrip_spec::alphabet(k) as int] == k,
+   |                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+  --> src/../t13-handoff/chunk-lemmas.rs:43:87
+   |
+43 |  requires canonical(i,a,6),canonical(i,b,6),t.len()==256, forall|k:int| 0<=k<64 ==> t[crate::roundtrip_spec::alphabet(k) as int] == k,
+   |                                                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+  --> src/../t15-handoff/suffix-lemmas.rs:16:2
+   |
+16 |  forall|k:int| 0<=k<64 ==> t[crate::roundtrip_spec::alphabet(k) as int]==k,
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+  --> src/../t15-handoff/suffix-lemmas.rs:16:30
+   |
+16 |  forall|k:int| 0<=k<64 ==> t[crate::roundtrip_spec::alphabet(k) as int]==k,
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+  --> src/../t15-handoff/suffix-lemmas.rs:76:2
+   |
+76 |  forall|k:int| 0<=k<64 ==> t[crate::roundtrip_spec::alphabet(k) as int]==k,
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+  --> src/../t15-handoff/suffix-lemmas.rs:76:30
+   |
+76 |  forall|k:int| 0<=k<64 ==> t[crate::roundtrip_spec::alphabet(k) as int]==k,
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:657:24
+    |
+657 |  table.len() == 256 && (forall|i:int| 0 <= i < 64 ==> table[crate::roundtrip_spec::alphabet(i) as int] == i)
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:657:61
+    |
+657 |  table.len() == 256 && (forall|i:int| 0 <= i < 64 ==> table[crate::roundtrip_spec::alphabet(i) as int] == i)
+    |                                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:668:2
+    |
+668 | /  forall|o:Seq<u8>| crate::roundtrip_spec::decode_pre(o,input,before) ==>
+669 | |    crate::roundtrip_spec::decode_guarantee(o,input,before,after,n)
+    | |__________________________________________________________________^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:668:20
+    |
+668 |  forall|o:Seq<u8>| crate::roundtrip_spec::decode_pre(o,input,before) ==>
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode_suffix.rs:257:7
+    |
+257 |       assert forall|original:Seq<u8>| crate::roundtrip_spec::decode_pre(original,input@,before) implies
+    |       ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode_suffix.rs:257:39
+    |
+257 |       assert forall|original:Seq<u8>| crate::roundtrip_spec::decode_pre(original,input@,before) implies
+    |                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:661:2
+    |
+661 | /  forall|original:Seq<u8>| crate::roundtrip_spec::decode_pre(original,input,before) ==>
+662 | |   0 <= count <= original.len() && crate::roundtrip_spec::writes(before,after,original.take(count))
+    | |__________________________________________________________________________________________________^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:661:27
+    |
+661 |  forall|original:Seq<u8>| crate::roundtrip_spec::decode_pre(original,input,before) ==>
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:429:4
+    |
+429 |    forall|k:int| 0 <= k < 64 ==> decode_table@[crate::roundtrip_spec::alphabet(k) as int] == k,
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:429:48
+    |
+429 |    forall|k:int| 0 <= k < 64 ==> decode_table@[crate::roundtrip_spec::alphabet(k) as int] == k,
+    |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:430:21
+    |
+430 |    ensures r.is_ok(), forall|s:Seq<u8>| crate::t13_chunks::canonical(input@,s,6) ==>
+    |  _____________________^
+431 | |    crate::roundtrip_spec::writes(old(output)@,final(output)@,s),
+    | |_______________________________________________________________^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:430:39
+    |
+430 |  ensures r.is_ok(), forall|s:Seq<u8>| crate::t13_chunks::canonical(input@,s,6) ==>
+    |                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:515:7
+    |
+515 |       assert forall|s:Seq<u8>| crate::t13_chunks::canonical(input@,s,6) implies
+    |       ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:515:32
+    |
+515 |       assert forall|s:Seq<u8>| crate::t13_chunks::canonical(input@,s,6) implies
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:535:4
+    |
+535 |    forall|k:int| 0 <= k < 64 ==> decode_table@[crate::roundtrip_spec::alphabet(k) as int] == k,
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:535:48
+    |
+535 |    forall|k:int| 0 <= k < 64 ==> decode_table@[crate::roundtrip_spec::alphabet(k) as int] == k,
+    |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:536:21
+    |
+536 |    ensures r.is_ok(), forall|s:Seq<u8>| crate::t13_chunks::canonical(input@,s,3) ==>
+    |  _____________________^
+537 | |    crate::roundtrip_spec::writes(old(output)@,final(output)@,s),
+    | |_______________________________________________________________^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:536:39
+    |
+536 |  ensures r.is_ok(), forall|s:Seq<u8>| crate::t13_chunks::canonical(input@,s,3) ==>
+    |                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:584:7
+    |
+584 |       assert forall|s:Seq<u8>| crate::t13_chunks::canonical(input@,s,3) implies
+    |       ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:584:32
+    |
+584 |       assert forall|s:Seq<u8>| crate::t13_chunks::canonical(input@,s,3) implies
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:164:4
+    |
+164 |    forall|i:int| 0 <= i < 64 ==> decode_table@[crate::roundtrip_spec::alphabet(i) as int] == i,
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:164:48
+    |
+164 |    forall|i:int| 0 <= i < 64 ==> decode_table@[crate::roundtrip_spec::alphabet(i) as int] == i,
+    |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:289:11
+    |
+289 |           assert forall|j:int| output_base as int+24<=j<before.len() implies output@[j]==before[j] by { }
+    |           ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:289:90
+    |
+289 |           assert forall|j:int| output_base as int+24<=j<before.len() implies output@[j]==before[j] by { }
+    |                                                                                          ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:200:13
+    |
+200 |             forall|j:int| chunks0.index()*24<=j<before.len() ==> output@[j]==before[j],
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:200:78
+    |
+200 |             forall|j:int| chunks0.index()*24<=j<before.len() ==> output@[j]==before[j],
+    |                                                                              ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:202:13
+    |
+202 |             forall|k:int| 0<=k<64 ==> decode_table@[crate::roundtrip_spec::alphabet(k) as int] == k,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:202:53
+    |
+202 |             forall|k:int| 0<=k<64 ==> decode_table@[crate::roundtrip_spec::alphabet(k) as int] == k,
+    |                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:338:11
+    |
+338 |           assert forall|j:int| output_base as int+3<=j<before.len() implies output@[j]==before[j] by { }
+    |           ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:338:89
+    |
+338 |           assert forall|j:int| output_base as int+3<=j<before.len() implies output@[j]==before[j] by { }
+    |                                                                                         ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:302:13
+    |
+302 |             forall|j:int| input_unrolled_loop_end as int/4*3+chunks1.index()*3<=j<before.len() ==> output@[j]==before[j],
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:302:112
+    |
+302 |             forall|j:int| input_unrolled_loop_end as int/4*3+chunks1.index()*3<=j<before.len() ==> output@[j]==before[j],
+    |                                                                                                                ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:304:13
+    |
+304 |             forall|k:int| 0<=k<64 ==> decode_table@[crate::roundtrip_spec::alphabet(k) as int] == k,
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:304:53
+    |
+304 |             forall|k:int| 0<=k<64 ==> decode_table@[crate::roundtrip_spec::alphabet(k) as int] == k,
+    |                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:346:7
+    |
+346 |       assert forall|o:Seq<u8>| crate::roundtrip_spec::decode_pre(o,input@,before) implies
+    |       ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:346:32
+    |
+346 |       assert forall|o:Seq<u8>| crate::roundtrip_spec::decode_pre(o,input@,before) implies
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:127:11
+    |
+127 |           assert forall|k:int| 0 <= k < before.len() - o.len() implies
+    |           ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:128:48
+    |
+128 |             output@.skip(o.len() as int)[k] == before.skip(o.len() as int)[k] by {
+    |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/decode.rs:118:9
+    |
+118 |         assert forall|o:Seq<u8>| crate::roundtrip_spec::decode_pre(o,input@,before)
+    |         ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/decode.rs:118:34
+    |
+118 |         assert forall|o:Seq<u8>| crate::roundtrip_spec::decode_pre(o,input@,before)
+    |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:810:3
+    |
+810 |   (forall|i:int| 0 <= i < 64 ==> self.encode_table@[i] == crate::roundtrip_spec::alphabet(i)) &&
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:810:59
+    |
+810 |   (forall|i:int| 0 <= i < 64 ==> self.encode_table@[i] == crate::roundtrip_spec::alphabet(i)) &&
+    |                                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:811:3
+    |
+811 |   (forall|i:int| 0 <= i < 64 ==> self.decode_table@[crate::roundtrip_spec::alphabet(i) as int] == i) &&
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:811:53
+    |
+811 |   (forall|i:int| 0 <= i < 64 ==> self.decode_table@[crate::roundtrip_spec::alphabet(i) as int] == i) &&
+    |                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:813:3
+    |
+813 | /   (forall|b:int| 0 <= b < 256 ==> self.decode_table@[b] == 255 ||
+814 | |     (self.decode_table@[b] < 64 && self.encode_table@[self.decode_table@[b] as int] == b)) &&
+    | |__________________________________________________________________________________________^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:813:35
+    |
+813 |   (forall|b:int| 0 <= b < 256 ==> self.decode_table@[b] == 255 ||
+    |                                   ^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:704:10
+    |
+704 |  ensures forall|i:int| 0 <= i < n ==> Alphabet::symbols_prefix(s,n)@[i] == s.spec_bytes()[i],
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:704:76
+    |
+704 |  ensures forall|i:int| 0 <= i < n ==> Alphabet::symbols_prefix(s,n)@[i] == s.spec_bytes()[i],
+    |                                                                            ^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:715:3
+    |
+715 |   forall|i:int| 0 <= i < 64 ==> alphabet::STANDARD.symbols@[i] == crate::roundtrip_spec::alphabet(i),
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:715:67
+    |
+715 |   forall|i:int| 0 <= i < 64 ==> alphabet::STANDARD.symbols@[i] == crate::roundtrip_spec::alphabet(i),
+    |                                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:723:2
+    |
+723 |  assert forall|i:int| 0 <= i < 64 implies s.spec_bytes()[i] == crate::roundtrip_spec::alphabet(i) by {
+    |  ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:723:64
+    |
+723 |  assert forall|i:int| 0 <= i < 64 implies s.spec_bytes()[i] == crate::roundtrip_spec::alphabet(i) by {
+    |                                                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:795:3
+    |
+795 |   forall|i:int| 0 <= i < n ==> decode_prefix(a,n)@[a.symbols@[i] as int] == i,
+    |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:795:52
+    |
+795 |   forall|i:int| 0 <= i < n ==> decode_prefix(a,n)@[a.symbols@[i] as int] == i,
+    |                                                    ^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:802:3
+    |
+802 |   assert forall|i:int| 0 <= i < n implies decode_prefix(a,n)@[a.symbols@[i] as int] == i by {
+    |   ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:802:63
+    |
+802 |   assert forall|i:int| 0 <= i < n implies decode_prefix(a,n)@[a.symbols@[i] as int] == i by {
+    |                                                               ^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:834:3
+    |
+834 |   assert forall|i:int| 0 <= i < 64 implies self.decode_table@[crate::roundtrip_spec::alphabet(i) as int] == i by {
+    |   ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:834:63
+    |
+834 |   assert forall|i:int| 0 <= i < 64 implies self.decode_table@[crate::roundtrip_spec::alphabet(i) as int] == i by {
+    |                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:843:3
+    |
+843 |   assert forall|b:int| 0 <= b < 256 implies self.decode_table@[b] == 255 ||
+    |   ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:843:45
+    |
+843 |   assert forall|b:int| 0 <= b < 256 implies self.decode_table@[b] == 255 ||
+    |                                             ^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:330:15
+    |
+330 |               assert forall|j:int| 0 <= j < output_index+32 implies output@[j] == crate::roundtrip_spec::encoded_at(input@,j) by {
+    |               ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:330:83
+    |
+330 |               assert forall|j:int| 0 <= j < output_index+32 implies output@[j] == crate::roundtrip_spec::encoded_at(input@,j) by {
+    |                                                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:375:11
+    |
+375 |           assert forall|j:int| 0 <= j < output_index+4 implies output@[j] == crate::roundtrip_spec::encoded_at(input@,j) by {
+    |           ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:375:78
+    |
+375 |           assert forall|j:int| 0 <= j < output_index+4 implies output@[j] == crate::roundtrip_spec::encoded_at(input@,j) by {
+    |                                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:403:7
+    |
+403 |       assert forall|j:int| 0 <= j < output_index implies output@[j] == crate::roundtrip_spec::encoded_at(input@,j) by {
+    |       ^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:403:72
+    |
+403 |       assert forall|j:int| 0 <= j < output_index implies output@[j] == crate::roundtrip_spec::encoded_at(input@,j) by {
+    |                                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:154:4
+    |
+154 |    forall|i:int| 0 <= i < 64 ==> encode_table@[i] == crate::roundtrip_spec::alphabet(i),
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:154:54
+    |
+154 |    forall|i:int| 0 <= i < 64 ==> encode_table@[i] == crate::roundtrip_spec::alphabet(i),
+    |                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> src/engine/general_purpose/mod.rs:424:25
+    |
+424 |  invariant index <= 64, forall|j:int| 0 <= j < index ==> encode_table@[j] == alphabet.symbols@[j],
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> src/engine/general_purpose/mod.rs:424:58
+    |
+424 |  invariant index <= 64, forall|j:int| 0 <= j < index ==> encode_table@[j] == alphabet.symbols@[j],
+    |                                                          ^^^^^^^^^^^^^^^^
+
+note: Verus printed one or more automatically chosen quantifier triggers
+      because it had low confidence in the chosen triggers.
+      To suppress these messages, do one of the following:
+        (1) manually annotate a single desired trigger using #[trigger]
+            (example: forall|i: int, j: int| f(i) && #[trigger] g(i) && #[trigger] h(j)),
+        (2) manually annotate multiple desired triggers using #![trigger ...]
+            (example: forall|i: int| #![trigger f(i)] #![trigger g(i)] f(i) && g(i)),
+        (3) accept the automatically chosen trigger using #![auto]
+            (example: forall|i: int, j: int| #![auto] f(i) && g(i) && h(j))
+        (4) use the --triggers-mode silent command-line option to suppress all printing of triggers.
+      (Note: triggers are used by the underlying SMT theorem prover to instantiate quantifiers;
+      the theorem prover instantiates a quantifier whenever some expression matches the
+      pattern specified by one of the quantifier's triggers.)
+   --> src/engine/general_purpose/mod.rs:424:25
+    |
+424 |  invariant index <= 64, forall|j:int| 0 <= j < index ==> encode_table@[j] == alphabet.symbols@[j],
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+verification results:: 146 verified, 0 errors
+
+real	0m51.754s
+user	1m2.109s
+sys	0m2.992s

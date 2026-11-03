@@ -1,0 +1,315 @@
+cwd: /fastdata/v-boxiuli/noah/recheck/tsC-final/w
+env: PATH=/fastdata/v-boxiuli/noah/exp/tsC/verification/.system-proof/t29/verus/source/target-verus/release:/fastdata/v-boxiuli/noah/exp/tsC/verification/.tools/system-proof-agent/.venv/bin:/fastdata/v-boxiuli/noah/exp/tsC/verification/.tools/system-proof-agent/vertical/argus_system_proof/tools/verus-validation/toolchain/bin:/fastdata/v-boxiuli/noah/exp/tsC/verification/.tools/cargo/bin:/usr/local/bin:/usr/bin:/bin
+run: verus /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/lib.rs --edition=2021 --crate-type lib --cfg 'feature="std"' --cfg 'feature="alloc"' --triggers-mode silent --rlimit 20
+latest output: /fastdata/v-boxiuli/noah/recheck/tsC-final/w/target/verus-validation/latest.log
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/../.system-proof/t31/caller.rs:7:1
+   |
+ 7 | / #[verus_spec(
+ 8 | |     requires
+ 9 | |         supported(input@.len() as int),
+10 | |         encoded@.len() >= encoded_size(input@.len() as int),
+...  |
+16 | |         write_frame(old(decoded)@, final(decoded)@, input@),
+17 | | )]
+   | |__^
+   |
+   = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/general_purpose/mod.rs:197:5
+    |
+197 | /     #[verus_spec(r => ensures
+198 | |         r.capacity() == crate::round_trip_spec::decoded_capacity(input_len as int),
+199 | |     )]
+    | |______^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/mod.rs:257:5
+    |
+257 | /     #[verus_spec(r =>
+258 | |         with Tracked(event): Tracked<&mut Ghost<Seq<u8>>>
+259 | |         ensures exists|bytes: &[u8]| crate::round_trip_spec::observed(input, bytes)
+260 | |             && bytes@ == final(event)@
+...   |
+271 | |                     final(event)@, old(output_buf)@, final(output_buf)@, n as int)),
+272 | |     )]
+    | |______^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/mod.rs:279:9
+    |
+279 | / ...   #[verus_spec(r =>
+280 | | ...       ensures
+281 | | ...           if old(output_buf).len() >= crate::round_trip_spec::encoding_size(input_bytes@.len() as int, engine.encoding_paddin...
+282 | | ...               r matches Ok(n) && n == crate::round_trip_spec::encoding_size(input_bytes@.len() as int, engine.encoding_paddin...
+...   |
+287 | | ...           } else { r is Err },
+288 | | ...   )]
+    | |________^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/mod.rs:542:5
+    |
+542 | /     #[verus_spec(r =>
+543 | |         with Tracked(event): Tracked<&mut Ghost<Seq<u8>>>
+544 | |         ensures
+545 | |             exists|observed: &[u8]|
+...   |
+558 | |                     ==> crate::round_trip_spec::decode_post(b, old(output)@, final(output)@, n as int))),
+559 | |     )]
+    | |______^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/mod.rs:566:9
+    |
+566 | /         #[verus_spec(r =>
+567 | |             ensures
+568 | |                 (engine.canonical_decoder() && crate::round_trip_spec::canonical_input(input_bytes@)
+569 | |                     && old(output).len() >= crate::round_trip_spec::decoded_capacity(input_bytes.len() as int))
+...   |
+572 | |                     ==> crate::round_trip_spec::decode_post(b, old(output)@, final(output)@, n as int))),
+573 | |         )]
+    | |__________^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/../.system-proof/t47/event_use.rs:6:1
+   |
+ 6 | / #[verus_spec(counts =>
+ 7 | |  with Tracked(event): Tracked<&mut Ghost<Seq<u8>>>
+ 8 | |     requires
+ 9 | |         supported(input.first.len() as int), supported(input.second.len() as int),
+...  |
+17 | |         decode_post(final(event)@, old(decoded)@, final(decoded)@, counts.1 as int),
+18 | | )]
+   | |__^
+   |
+   = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/../.system-proof/t47/event_use.rs:69:1
+   |
+69 | / #[verus_spec(written =>
+70 | |     with Tracked(event): Tracked<&mut Ghost<Seq<u8>>>
+71 | |     requires
+72 | |         supported(input.bytes.len() as int),
+...  |
+77 | |         encode_post(final(event)@, old(encoded)@, final(encoded)@, written as int),
+78 | | )]
+   | |__^
+   |
+   = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/../.system-proof/t54/consumer.rs:7:1
+   |
+ 7 | / #[verus_spec(r =>
+ 8 | |     with Tracked(event): Tracked<&mut Ghost<Seq<u8>>>
+ 9 | |     ensures exists|s: &[u8]| observed(input,s) && s@ == final(event)@,
+10 | | )]
+   | |__^
+   |
+   = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/../.system-proof/t54/consumer.rs:18:1
+   |
+18 | / #[verus_spec(r =>
+19 | |     with Tracked(event): Tracked<&mut Ghost<Seq<u8>>>
+20 | |     requires !canonical_input(input.first@), crate::decoder_contract::image(b@,input.second@),
+21 | |         old(output).len() >= decoded_capacity(input.second.len() as int),
+...  |
+24 | |             && decode_post(b@,old(output)@,final(output)@,r.unwrap() as int),
+25 | | )]
+   | |__^
+   |
+   = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/../.system-proof/t74/specialized.rs:16:2
+   |
+16 | /  #[verus_spec(r=>
+17 | |  with Tracked(p):Tracked<&mut PointsTo<bool>>
+18 | |  requires old(p).id()==self.flag.id(),
+19 | |  ensures final(p).id()==old(p).id(),*final(p).value()==!*old(p).value(),
+20 | |  r@==if *old(p).value() {self.second@} else {self.first@},
+21 | |  )]
+   | |___^
+   |
+   = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/../.system-proof/t74/specialized.rs:29:1
+   |
+29 | / #[verus_spec(r=>
+30 | |  with Tracked(event):Tracked<&mut Ghost<Seq<u8>>>
+31 | |  requires supported(raw.len() as int),!canonical_input(invalid@),
+32 | |  old(encoded).len()>=encoded_size(raw.len() as int),
+...  |
+36 | |  write_frame(old(encoded)@,final(encoded)@,encoding(raw@)),
+37 | | )]
+   | |__^
+   |
+   = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/mod.rs:700:1
+    |
+700 | / /// The decode estimate used by an engine implementation. Users do not need to interact with this;
+701 | | /// it is only for engine implementors.
+702 | | ///
+703 | | /// Implementors may store relevant data here when constructing this to avoid having to calculate
+704 | | /// them again during actual decoding.
+    | |_-------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+    = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/general_purpose/mod.rs:636:1
+    |
+636 | /// Returns a table mapping a 6-bit index to the ASCII byte encoding of the index
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/general_purpose/decode_suffix.rs:9:1
+   |
+ 9 | / /// Decode the last 0-4 bytes, checking for trailing set bits and padding per the provided
+10 | | /// parameters.
+11 | | ///
+12 | | /// Returns the decode metadata representing the total number of bytes decoded, including the ones
+13 | | /// indicated as already written by `output_start`.
+   | |_--------------------------------------------------^
+   |   |
+   |   rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused attribute `allow`
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/general_purpose/decode_suffix.rs:14:1
+   |
+14 | #[allow(clippy::too_many_arguments)]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+note: the built-in attribute `allow` will be ignored, since it's applied to the macro invocation `verus`
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/general_purpose/decode_suffix.rs:15:1
+   |
+15 | verus! {
+   | ^^^^^
+   = note: `#[warn(unused_attributes)]` (part of `#[warn(unused)]`) on by default
+
+warning: Verus does not (yet) support autoderive Clone impl when the clone is not a copy; continuing, but without adding a specification for the derived Clone impl
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/general_purpose/mod.rs:33:17
+   |
+33 | #[derive(Debug, Clone)]
+   |                 ^^^^^
+   |
+   = help: to suppress this warning, use `#[verifier::allow(autoderive_clone_without_spec)]` on the surrounding function, datatype, or module or `#![verifier::allow(autoderive_clone_without_spec)]` in the module or crate
+
+warning: Verus does not (yet) support autoderive Clone impl when the clone is not a copy; continuing, but without adding a specification for the derived Clone impl
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/alphabet.rs:60:10
+   |
+60 | #[derive(Clone, Eq, PartialEq)]
+   |          ^^^^^
+   |
+   = help: to suppress this warning, use `#[verifier::allow(autoderive_clone_without_spec)]` on the surrounding function, datatype, or module or `#![verifier::allow(autoderive_clone_without_spec)]` in the module or crate
+
+warning: Verus does not (yet) support autoderive Clone impl when the clone is not a copy; continuing, but without adding a specification for the derived Clone impl
+   --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/encode.rs:194:10
+    |
+194 | #[derive(Clone, Debug, PartialEq, Eq)]
+    |          ^^^^^
+    |
+    = help: to suppress this warning, use `#[verifier::allow(autoderive_clone_without_spec)]` on the surrounding function, datatype, or module or `#![verifier::allow(autoderive_clone_without_spec)]` in the module or crate
+
+warning: autoderive Clone impl does not take the form Verus expects; continuing, but without adding a specification for the derived Clone impl
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/decode.rs:10:10
+   |
+10 | #[derive(Clone, PartialEq, Eq)]
+   |          ^^^^^
+   |
+   = help: to suppress this warning, use `#[verifier::allow(autoderive_clone_without_spec)]` on the surrounding function, datatype, or module or `#![verifier::allow(autoderive_clone_without_spec)]` in the module or crate
+
+warning: autoderive Clone impl does not take the form Verus expects; continuing, but without adding a specification for the derived Clone impl
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/decode.rs:92:10
+   |
+92 | #[derive(Clone, Debug, PartialEq, Eq)]
+   |          ^^^^^
+   |
+   = help: to suppress this warning, use `#[verifier::allow(autoderive_clone_without_spec)]` on the surrounding function, datatype, or module or `#![verifier::allow(autoderive_clone_without_spec)]` in the module or crate
+
+verification results:: 172 verified, 0 errors
+warning: 21 warnings emitted
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/mod.rs:700:1
+    |
+700 | / /// The decode estimate used by an engine implementation. Users do not need to interact with this;
+701 | | /// it is only for engine implementors.
+702 | | ///
+703 | | /// Implementors may store relevant data here when constructing this to avoid having to calculate
+704 | | /// them again during actual decoding.
+    | |_-------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+    = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/general_purpose/mod.rs:636:1
+    |
+636 | /// Returns a table mapping a 6-bit index to the ASCII byte encoding of the index
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+  --> /fastdata/v-boxiuli/noah/recheck/tsC-final/w/src/engine/general_purpose/decode_suffix.rs:9:1
+   |
+ 9 | / /// Decode the last 0-4 bytes, checking for trailing set bits and padding per the provided
+10 | | /// parameters.
+11 | | ///
+12 | | /// Returns the decode metadata representing the total number of bytes decoded, including the ones
+13 | | /// indicated as already written by `output_start`.
+   | |_--------------------------------------------------^
+   |   |
+   |   rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: 3 warnings emitted
+
+completed: exit=0 wall=33.458s
+result: /fastdata/v-boxiuli/noah/recheck/tsC-final/w/target/verus-validation/runs/20261103T155943.361995Z-2098566/result.json
+
+real	0m40.290s
+user	0m49.627s
+sys	0m5.437s
+exit=0

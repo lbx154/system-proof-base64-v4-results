@@ -1,0 +1,63 @@
+error[E0425]: cannot find value `enumerate_postcondition` in module `vstd::std_specs::iter`
+ --> src/engine/general_purpose/decode.rs:3:48
+  |
+3 | verus! { broadcast use {vstd::std_specs::iter::enumerate_postcondition, vstd::seq::group_seq_lemmas}; }
+  |                                                ^^^^^^^^^^^^^^^^^^^^^^^
+  |
+ --> std_specs/iter.rs:405:0
+ ::: std_specs/iter.rs:408:35
+  |
+  = note: similarly named function `filter_postcondition` defined here
+help: a function with a similar name exists
+  |
+3 - verus! { broadcast use {vstd::std_specs::iter::enumerate_postcondition, vstd::seq::group_seq_lemmas}; }
+3 + verus! { broadcast use {vstd::std_specs::iter::filter_postcondition, vstd::seq::group_seq_lemmas}; }
+  |
+
+error[E0425]: cannot find value `enumerate_postcondition` in module `vstd::std_specs::iter`
+  --> src/engine/general_purpose/decode_suffix.rs:17:39
+   |
+17 | broadcast use {vstd::std_specs::iter::enumerate_postcondition, vstd::seq::group_seq_lemmas, vstd::slice::group_slice_axioms};
+   |                                       ^^^^^^^^^^^^^^^^^^^^^^^
+   |
+  --> std_specs/iter.rs:405:0
+  ::: std_specs/iter.rs:408:35
+   |
+   = note: similarly named function `filter_postcondition` defined here
+help: a function with a similar name exists
+   |
+17 - broadcast use {vstd::std_specs::iter::enumerate_postcondition, vstd::seq::group_seq_lemmas, vstd::slice::group_slice_axioms};
+17 + broadcast use {vstd::std_specs::iter::filter_postcondition, vstd::seq::group_seq_lemmas, vstd::slice::group_slice_axioms};
+   |
+
+error[E0425]: cannot find value `slice_array_result_contract` in module `vstd::std_specs::convert`
+   --> src/engine/general_purpose/mod.rs:464:41
+    |
+464 | broadcast use vstd::std_specs::convert::slice_array_result_contract;
+    |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `vstd::std_specs::convert`
+
+error[E0425]: cannot find value `slice_array_result_contract` in module `vstd::std_specs::convert`
+  --> src/../t9-handoff/primitives.rs:11:41
+   |
+11 | broadcast use vstd::std_specs::convert::slice_array_result_contract;
+   |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `vstd::std_specs::convert`
+
+error[E0425]: cannot find value `enumerate_postcondition` in module `vstd::std_specs::iter`
+ --> src/../t12-handoff/iterator-proofs.rs:4:39
+  |
+4 | broadcast use {vstd::std_specs::iter::enumerate_postcondition, vstd::seq::group_seq_lemmas, vstd::slice::group_slice_axioms};
+  |                                       ^^^^^^^^^^^^^^^^^^^^^^^
+  |
+ --> std_specs/iter.rs:405:0
+ ::: std_specs/iter.rs:408:35
+  |
+  = note: similarly named function `filter_postcondition` defined here
+help: a function with a similar name exists
+  |
+4 - broadcast use {vstd::std_specs::iter::enumerate_postcondition, vstd::seq::group_seq_lemmas, vstd::slice::group_slice_axioms};
+4 + broadcast use {vstd::std_specs::iter::filter_postcondition, vstd::seq::group_seq_lemmas, vstd::slice::group_slice_axioms};
+  |
+
+error: aborting due to 5 previous errors
+
+For more information about this error, try `rustc --explain E0425`.

@@ -1,0 +1,148 @@
+diff --git a/source/rust_verify/src/rust_to_vir_func.rs b/source/rust_verify/src/rust_to_vir_func.rs
+index 8169b109..f663fc67 100644
+--- a/source/rust_verify/src/rust_to_vir_func.rs
++++ b/source/rust_verify/src/rust_to_vir_func.rs
+@@ -778,8 +778,23 @@ fn compare_external_ty<'tcx>(
+                 rustc_middle::ty::TyKind::Array(ty1, const1),
+                 rustc_middle::ty::TyKind::Array(ty2, const2),
+             ) => {
+-                const1 == const2
+-                    && compare_external_ty(tcx, verus_items, &ty1, &ty2, external_trait_from_to)
++                (const1 == const2 || {
++                    let env = TypingEnv::fully_monomorphized();
++                    let eval = |c: rustc_middle::ty::Const<'tcx>| {
++                        match c.kind() {
++                            ConstKind::Value(_) => c.try_to_target_usize(tcx),
++                            ConstKind::Alias(_, u) if u.args.is_empty() => {
++                                tcx.try_normalize_erasing_regions(env, rustc_middle::ty::Unnormalized::new_wip(c)).ok()
++                                    .and_then(|n| n.try_to_target_usize(tcx))
++                            }
++                            _ => None,
++                        }
++                    };
++                    match (eval(*const1), eval(*const2)) {
++                        (Some(n1), Some(n2)) => n1 == n2,
++                        _ => false,
++                    }
++                }) && compare_external_ty(tcx, verus_items, &ty1, &ty2, external_trait_from_to)
+             }
+             (
+                 rustc_middle::ty::TyKind::Pat(ty1, pat1),
+diff --git a/source/rust_verify/src/verifier.rs b/source/rust_verify/src/verifier.rs
+index 18495374..8bb515dc 100644
+--- a/source/rust_verify/src/verifier.rs
++++ b/source/rust_verify/src/verifier.rs
+@@ -2935,6 +2935,13 @@ impl Verifier {
+             .map_err(|e| (vec![e], Vec::new()))?;
+         }
+ 
++        // Eager const evaluation builds MIR and may query annotated const THIR.
++        // It must follow mode checking and erasure-context initialization.
++        rustc_hir_analysis_verus::check_crate_initializers(tcx);
++        if tcx.dcx().err_count() != 0 {
++            return Ok(false);
++        }
++
+         // These can invoke mir_borrowck when opaque types are involved.
+         // Thus, we can only run these after initializing erasure_hints
+         tcx.hir_for_each_module(|module| {
+diff --git a/source/rustc_hir_analysis/src/lib.rs b/source/rustc_hir_analysis/src/lib.rs
+index f6235137..120cdbf8 100644
+--- a/source/rustc_hir_analysis/src/lib.rs
++++ b/source/rustc_hir_analysis/src/lib.rs
+@@ -185,26 +185,7 @@ pub fn check_crate(tcx: TyCtxt<'_>) {
+ 
+     tcx.par_hir_body_owners(|item_def_id| {
+         let def_kind = tcx.def_kind(item_def_id);
+-        // Make sure we evaluate all static and (non-associated) const items, even if unused.
+-        // If any of these fail to evaluate, we do not want this crate to pass compilation.
+-        match def_kind {
+-            DefKind::Static { .. } => {
+-                tcx.ensure_ok().eval_static_initializer(item_def_id);
+-                check::maybe_check_static_with_link_section(tcx, item_def_id);
+-            }
+-            DefKind::Const { .. }
+-                if !tcx.generics_of(item_def_id).own_requires_monomorphization()
+-                    && !tcx.is_type_const(item_def_id) =>
+-            {
+-                // FIXME(generic_const_items): Passing empty instead of identity args is fishy but
+-                //                             seems to be fine for now. Revisit this!
+-                let instance = ty::Instance::new_raw(item_def_id.into(), ty::GenericArgs::empty());
+-                let cid = GlobalId { instance, promoted: None };
+-                let typing_env = ty::TypingEnv::fully_monomorphized();
+-                tcx.ensure_ok().eval_to_const_value_raw(typing_env.as_query_input(cid));
+-            }
+-            _ => (),
+-        }
++        // Verus defers eager initializer evaluation until THIR erasure is initialized.
+         // Skip `AnonConst`s and type system `InlineConst`s because we feed their `type_of` in
+         // `feed_anon_const_type`.
+         // Also skip items for which typeck forwards to parent typeck.
+@@ -236,6 +217,34 @@ pub fn check_crate(tcx: TyCtxt<'_>) {
+     tcx.ensure_ok().check_unused_traits(());
+ }
+ 
++/// Run the eager initializer checks after Verus has initialized THIR erasure.
++/// Keep the same checks as rustc: unused invalid constants must still be rejected.
++pub fn check_crate_initializers(tcx: TyCtxt<'_>) {
++    tcx.par_hir_body_owners(|item_def_id| {
++        let def_kind = tcx.def_kind(item_def_id);
++        // Make sure we evaluate all static and (non-associated) const items, even if unused.
++        // If any of these fail to evaluate, we do not want this crate to pass compilation.
++        match def_kind {
++            DefKind::Static { .. } => {
++                tcx.ensure_ok().eval_static_initializer(item_def_id);
++                check::maybe_check_static_with_link_section(tcx, item_def_id);
++            }
++            DefKind::Const { .. }
++                if !tcx.generics_of(item_def_id).own_requires_monomorphization()
++                    && !tcx.is_type_const(item_def_id) =>
++            {
++                // FIXME(generic_const_items): Passing empty instead of identity args is fishy but
++                //                             seems to be fine for now. Revisit this!
++                let instance = ty::Instance::new_raw(item_def_id.into(), ty::GenericArgs::empty());
++                let cid = GlobalId { instance, promoted: None };
++                let typing_env = ty::TypingEnv::fully_monomorphized();
++                tcx.ensure_ok().eval_to_const_value_raw(typing_env.as_query_input(cid));
++            }
++            _ => (),
++        }
++    });
++}
++
+ /// Lower a [`hir::Ty`] to a [`Ty`].
+ ///
+ /// <div class="warning">
+diff --git a/source/vstd/std_specs/convert.rs b/source/vstd/std_specs/convert.rs
+index ef8a86ee..a436ba69 100644
+--- a/source/vstd/std_specs/convert.rs
++++ b/source/vstd/std_specs/convert.rs
+@@ -115,6 +115,28 @@ pub assume_specification<T, U: Into<T>>[ <T as TryFrom<U>>::try_from ](a: U) ->
+         call_ensures(U::into, (a,), ret.unwrap()),
+ ;
+ 
++// T29 source-supported std slice-to-eight-byte-array model.
++#[verifier::external_type_specification]
++#[verifier::external_body]
++pub struct ExTryFromSliceError(core::array::TryFromSliceError);
++#[verifier::external_fn_specification]
++pub fn ex_array_try_from<'unused, T: Copy, const N: usize>(s: &[T])
++    -> (r: Result<[T; N], core::array::TryFromSliceError>)
++    ensures r.is_ok() == (s.len() == N), r.is_ok() ==> r.unwrap()@ == s@
++{ <[T; N] as core::convert::TryFrom<&[T]>>::try_from(s) }
++pub uninterp spec fn spec_array_try_from<T: Copy, const N: usize>(s: &[T])
++    -> Result<[T; N], core::array::TryFromSliceError>;
++pub broadcast axiom fn axiom_array_try_from<T: Copy, const N: usize>(s: &[T])
++    ensures
++        (#[trigger] spec_array_try_from::<T, N>(s)).is_ok() == (s.len() == N),
++        spec_array_try_from::<T, N>(s).is_ok() ==> spec_array_try_from::<T, N>(s).unwrap()@ == s@,
++;
++impl<'a, T: Copy, const N: usize> TryFromSpecImpl<&'a [T]> for [T; N] {
++    open spec fn obeys_try_from_spec() -> bool { true }
++    open spec fn try_from_spec(s: &'a [T]) -> Result<Self, core::array::TryFromSliceError> {
++        spec_array_try_from::<T, N>(s)
++    }
++}
+ } // verus!
+ macro_rules! impl_from_spec {
+     ($from: ty => [$($to: ty)*]) => {

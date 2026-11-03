@@ -1,0 +1,536 @@
+{
+  "id": "p-3bc83011",
+  "created": "2026-11-02T17:28:04.205Z",
+  "workdir": "/fastdata/v-boxiuli/noah/exp/ts",
+  "request": "Short goal:\nPreserve arbitrary input bytes through the production Base64 encode_slice and decode_slice round trip, including exact reported prefixes, destination suffixes, generic input semantics, and the actual public callers.\n\nComplete developer input (authoritative):\n# Task: keep data unchanged through Base64 encoding and decoding\n\nUse Verus to prove the properties below.\n\n## What I need\n\nI use this library to store or transmit binary data as text and recover the original data later. I want to verify that the real encoding and decoding APIs work together without losing, changing, duplicating or reordering bytes. This task is about lossless round-trip behavior, not a complete standards-compliance audit.\n\nUse the registered production checkout at the fixed revision supplied with this task. The system-proof runtime provides that authoritative production checkout and a separate verification checkout of the same source. Treat every source path below as relative to the registered repository root; do not assume that either checkout is named `code/`. Read production to establish original behavior, make proof and verification adaptations in verification, and keep any authorized production fix and all production/verification drift explicit. Use the `GeneralPurpose` engine with `general_purpose::STANDARD`, disable default features, and enable only `std`: `--no-default-features --features std`. Do not use SIMD engines for this task.\n\n## Top-level scope\n\n| Entry point | What I use it for |\n| --- | --- |\n| `Engine::encode_slice` | Encode my input into a caller-provided buffer and report how many bytes were written |\n| `Engine::decode_slice` | Decode exactly that reported encoded prefix into another caller-provided buffer |\n| `encoded_len` and `decoded_len_estimate` | Size those buffers before making the two calls |\n\nThe public API is in `src/engine/mod.rs`. The selected implementation is in `src/engine/general_purpose/`; length/padding support and tables are in `src/encode.rs`, `src/decode.rs` and `src/alphabet.rs`. These supporting functions matter insofar as the real public calls depend on them; choose the internal breakdown yourself.\n\n## Behavior I expect\n\n1. For every input byte sequence within the supported length range, with buffers sized sufficiently using the public sizing helpers, encoding and subsequent decoding both succeed. The decoded length and every decoded byte equal the original input.\n2. The caller passes only the encoded prefix reported by `encode_slice`, not unused capacity after it. Existing bytes in the output buffers must not influence the result.\n3. Empty data, zero bytes, non-UTF-8 data and lengths on either side of the implementation's processing-block boundaries are all normal inputs. Do not limit the task to text strings or a few example lengths.\n4. Input data is not modified. On success, bytes beyond the reported written prefix in each destination buffer remain unchanged.\n5. State clearly which input lengths the platform and sizing helpers can represent. Within that range and the stated capacity conditions, reporting an error instead of recovering the data is not an acceptable substitute for success.\n\n## When failure is permitted\n\nNo encoding or decoding error is permitted within the round-trip use described above: supported input length, sufficient caller-provided buffers, and decoding exactly the encoder's reported output. An error from an internal helper is not an additional permitted failure reason, and a panic is not a substitute for the required result.\n\nJustify the supported length range from representation and capacity limits, not by defining it as whichever inputs the implementation accepts. Establish that the sizing helpers provide enough space in that range; do not assume their correctness to excuse a short output or a rejected encoding. Arbitrary external encoded strings, insufficient buffers and unrepresentable lengths remain outside this task, not exceptions that may be applied to supported calls.\n\n## What is not part of this request\n\nI am not asking for interoperability with another Base64 implementation, all RFC rules, arbitrary malformed-string behavior, exact error messages/offsets, insufficient-output behavior, streaming readers/writers, other alphabets/configurations, allocation internals or timing guarantees.\n\nThe decoder must work on every encoded string that this selected encoder produces for the inputs above. This does not require a promise about every other string the decoder could receive.\n\n## What to return\n\nTell me which requested behaviors you established for these actual APIs, including the absence of unjustified errors in the supported round-trip, any counterexample or bug, the code and configuration covered, and remaining limitations or environmental assumptions. Keep the original revision identifiable. If code changes are needed, separate findings about the original from the changed version; do not replace the codec with another algorithm and report that as verification of this source.\n\n---\nHow to run this here: use the system_proof skill pack (read its SKILL.md first; each role then reads roles/<role>.md from it). Production worktree (authoritative source, read-only except as the pack allows): /fastdata/v-boxiuli/noah/exp/ts/production. Verification worktree, where all proof work happens: /fastdata/v-boxiuli/noah/exp/ts/verification. The Verus toolchain and the system-proof tools (verus-run, proof-map, specdet, boundary-scan, drift-check, verus-gap, ...) are on PATH. Each role's live context per phase: /fastdata/v-boxiuli/noah/exp/ts/verification/.system-proof/context/<role>.<phase>.json. Target hints: Engine::encode_slice,Engine::decode_slice,GeneralPurpose::encode_slice,GeneralPurpose::decode_slice,encoded_len,decoded_len_estimate. The tools/, home/, codex/ and logs/ folders here are infrastructure, not part of the task.\n",
+  "backend": "codex",
+  "model": "gpt-6.1-sol",
+  "modelAutomatic": false,
+  "status": "idle",
+  "error": null,
+  "questions": [],
+  "tasks": [
+    {
+      "id": "t1",
+      "title": "t1: Ground the public STANDARD round-trip specification with a checked actual-code bridge.",
+      "from": "planner",
+      "objective": "t1: Ground the public STANDARD round-trip specification with a checked actual-code bridge.\n\nRead system_proof/SKILL.md, roles/engineer.md, your engineer.ground.json context and the complete required Ground method. Work in /fastdata/v-boxiuli/noah/exp/ts/verification; inspect authoritative production read-only. Preserve the registered original revision and selected configuration: GeneralPurpose with general_purpose::STANDARD, --no-default-features --features std, no SIMD.\n\nThe unresolved semantic result is whether a canonical caller-consumable contract expresses the full requested lossless use and connects to the actual public bodies. Establish that Ground basis, not the complete lower codec proof. Cover arbitrary byte sequences, exact reported encoded prefix, mandatory successful decoding and exact decoded length/data, arbitrary initial destination contents, preserved suffixes and input semantics. Derive the supported length/capacity domain from usize arithmetic and realizable Rust slices; distinguish helper representation limits from buffer limits. Do not define the domain through successful implementation outcomes or add internal-error exceptions.\n\nInspect Engine::encode_slice at src/engine/mod.rs:227 and decode_slice at :386, including their nested inner bodies and generic AsRef conversion. Both currently call input.as_ref() once: specify the bytes supplied by that actual conversion without silently assuming arbitrary user-defined conversions are pure or equating repeated conversions. Identify relevant environmental/interface conditions explicitly. Inspect encoded_len at src/encode.rs:101 and decoded_len_estimate at src/decode.rs:189 and trace their STANDARD dependencies.\n\nProduce open public meaning separated from internal proof machinery, and a source-grounded caller/observation-path check that sizes buffers with the public helpers, invokes the actual APIs, passes exactly the reported encoded prefix, and consumes their guarantees. Establish a reproducible actual Verus route and successfully check at least one selected actual public target body with its first code-connected layer at its original source location. Temporary lower contracts are permitted only as explicit remaining implementation obligations; a copied codec or trusted TOP body cannot supply this bridge. Keep one common semantic context with no proof-specific feature gates.\n\nAssess analyze-function, analyze-protocol and specdet against named live uncertainties; the context recommends specification completeness. Execute a substantive source-bound attack when it can distinguish a live alternative, particularly missing success/frame/domain guarantees, and retain its artifacts or concrete operational failure. Record reasons for unselected routes.\n\nReturn the required Ground handoff: specification symbols/domain, original revision/configuration, actual target and source-grounded usage, exact verifier command/toolchain/readable output, checked-body binding, initial goal-relevant call graph with edge dispositions, temporary abstractions and real code anchors, remaining lower obligations, attack decisions/results and explicit drift. This evidence will be independently reviewed against all Ground dimensions before phase advancement.\n\nUseful negative result: a concrete source-bound counterexample, unachievable caller premise, representation mismatch or precise verifier integration obstacle, with the affected TOP obligation and a non-weakening next step. If integration becomes expansive, stop after a bounded diagnosis with a reproducible failure and proposed adaptation rather than replacing the actual implementation or starting broad lower proof work.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done for the explicitly permitted bounded negative result. Ground advancement remains unsupported.\n\nIndependent inspection confirms production is clean at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79 and Engine source matches production. The encoded_len annotation preserves its executable body. Fresh direct Verus replay with the selected std+alloc flags returned 1 verified, 0 errors, exit 0. This establishes the padded helper formula, not the slice-API bridge.\n\nThe retained Engine and caller diagnostics substantiate a precise integration frontier: ignored engine/error/metadata types, undeclared generic AsRef interface, and unsupported actual API/helper calls prevent checking the intended consumer. Its exact-prefix usage and success/data/frame obligations remain unproved. The public sequence definitions are useful candidates but are not yet canonical contracts attached to the actual slice bodies.\n\nThe domain derivation correctly distinguishes usize helper representability from realizable slice capacities. Replaying the retained AsRef witness confirms that repeated conversions can differ; this refutes a purity assumption, not the requested codec behavior. No production bug is established.\n\nAttack disposition: accept specdet and analyze-function as substantive source-bound attempts with retained operational failures, without accepting semantic completeness. The reason for omitting analyze-protocol is adequate for the named uncertainties.\n\nNonblocking replay limitation: verify.sh could not overwrite its read-only retained log directory in this review environment. Replaying the same source/configuration without log emission succeeded.\n\nNext work remains in Ground: adapt the actual Engine/interface surface, attach the public contracts, check a slice target and its first code-connected layer, then verify the source-grounded caller and repeat the completeness attack. Preserve mandatory success, full framing, actual conversion semantics, and the original domain. The lower codec proof remains deferred."
+      }
+    },
+    {
+      "id": "t2",
+      "title": "t2: Connect the actual public slice APIs to the round-trip contract through a checked interface bridge.",
+      "from": "planner",
+      "objective": "t2: Connect the actual public slice APIs to the round-trip contract through a checked interface bridge.\n\nRemain in Ground. Read your current context and the system_proof Engineer guide. Build on t1's independently accepted bounded diagnosis and .system-proof/t1/handoff.md; do not repeat helper setup or treat t1 as Ground completion. Production remains read-only at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79.\n\nThe missing fact is that Verus can check the actual Engine slice bodies and their public guarantees in a context usable by the intended caller. Adapt the Engine/GeneralPurpose/config/error/metadata and generic AsRef interfaces in verification, preserving executable behavior and source locations. Attach the canonical open success/data/length/frame contracts to the actual selected public APIs and their nested first layer. Check at least one actual slice target successfully, without external_body or assumed specifications carrying that target's result. Lower codec contracts may remain explicit Prove obligations; they cannot become permanent TCB merely because integration is difficult.\n\nPreserve t1's mathematical sizing domain and checked encoded_len formula. Connect decoded_len_estimate through its actual STANDARD estimate implementation sufficiently for the caller's capacity proof. std implies alloc, so the existing direct std+alloc flags represent the required --no-default-features --features std configuration; do not introduce SIMD or proof-specific semantic modes.\n\nModel the bytes from the actual single AsRef conversion and state its justified external effect/completion conditions. Prove the ordinary byte-slice identity instance needed by the consumer. Do not assume repeated conversions agree, whole generic T remains immutable, or arbitrary user code terminates. Preserve input-byte and destination framing for the promised use without adding implementation-success premises.\n\nReintegrate the bridge into src/roundtrip_caller.rs: establish public helper capacities, invoke the actual APIs, decode exactly the returned encoded prefix, and prove mandatory success, exact recovered bytes/length and both unchanged destination suffixes for arbitrary initial buffer contents and the full representable slice domain. All public definitions, intermediate contracts and dependencies must coexist in one selected verification context. A failed caller check must identify its precise remaining obligation rather than imply caller usability.\n\nAfter the interface is usable, repeat the source-bound completeness attack against the attached contract and full return/data/suffix observation. Reuse the accepted analyze-function operational failure and analyze-protocol omission rationale unless changed semantics reopen them. Do not rerun an unchanged failing route without an adaptation.\n\nReturn exact commands and fresh readable output, actual target-body inclusion evidence, contracts and their consumption links, updated call-graph obligations and temporary boundaries, source correspondence/drift, and an updated Ground handoff for independent review. Use a fresh writable evidence directory so retained t1 logs need not be overwritten; run shared-checkout mutations and verification serially.\n\nUseful negative result: if a specific interface construction remains unsupported, retain the smallest actual-source diagnostic, explain the precise language/interface obstacle and identify a different behavior-preserving route. Bound investigation to this API integration result; defer scalar codec proofs and unrelated APIs. Neither a copied implementation nor a trusted public wrapper resolves this task.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done for the explicitly permitted bounded negative result. Ground advancement remains unsupported.\n\nIndependent replay of the retained actual-crate hoisted construction and minimal diagnostic reproduced exit 1 with the Engine → encode_slice → Engine-bound helper dependency cycle. The complete production encode_slice item occurs byte-for-byte in the reduction. Hoisting alone does not resolve this construction. Production is clean at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79; restored Engine source matches production.\n\nThis narrows the interface uncertainty; it establishes neither a codec bug nor impossibility of other integration routes. No slice target, first-layer bridge or caller has verified. Attached public contracts, byte-slice AsRef identity, the actual estimate capacity chain and caller success/data/suffix proofs remain open. Diagnostic lower stubs supply no accepted result or permanent TCB. Deferring the repeated completeness attack until usable contracts exist is justified; prior attack dispositions remain applicable.\n\nThe proposed narrower capability interface is an untested next route. Continue in Ground with the original domain and mandatory guarantees preserved.\n\nNonblocking replay limitation: verification is mounted read-only here, so independent checks used an isolated /tmp copy of the retained adapted source; both failures reproduced without modifying the candidate."
+      }
+    },
+    {
+      "id": "t3",
+      "title": "t3: Test a noncyclic capability interface for the actual slice-API bridge.",
+      "from": "planner",
+      "objective": "t3: Test a noncyclic capability interface for the actual slice-API bridge.\n\nRemain in Ground. Read your current context and .system-proof/t2/handoff.md. Reuse the independently reviewed helper proof and dependency-cycle diagnosis. Do not retry hoisting with the same Engine bound.\n\nResolve this bounded question: can the selected actual public slice methods and their first layer be checked when lower codec/config/estimate capabilities are represented by a narrower interface that does not depend on those default methods? Implement and test that route in verification only. Preserve the actual executable statements and dispatch behavior. Any supertrait extraction, forwarding or changed generic bound requires explicit correspondence and compatibility justification; do not silently change the public implementation requirements or substitute a new codec. Production stays read-only at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79.\n\nSuccess means fresh Verus evidence checks at least one actual slice target and its first code-connected layer at its source location, consuming an attached public contract with mandatory success, exact length/data and destination suffix preservation. Temporary lower codec contracts may be named implementation obligations, never accepted permanent TCB. Preserve STANDARD, std with its implied alloc, no defaults or SIMD, the original representable capacity domain and arbitrary initial destination bytes. Keep all proof meanings in one common context.\n\nRetain the actual single AsRef conversion semantics; justify the ordinary byte-slice identity interface without assuming arbitrary conversions are pure or repeated conversions agree. If the interface succeeds, reintegrate it into the existing public-helper/exact-prefix caller: connect the actual decoded estimate chain, check the intended round-trip effect and repeat the source-bound completeness attack against usable contracts. Explicitly identify any remaining Ground obligations if these dependent checks remain unfinished.\n\nReviewer recognition evidence: exact source changes and erased behavior correspondence, generic implementor/dispatch analysis, command/toolchain and fresh readable output, actual checked-body trace, attached contract consumption, temporary lower boundaries and updated call-graph/handoff. Use a fresh writable t3 evidence directory and serialize shared-checkout mutations.\n\nUseful negative result is a reproducible obstacle specific to this narrower-interface route, with the smallest actual-source diagnostic and a materially different next route supported by that evidence. Bound work to interface construction and its immediate consumer consequence; defer broad scalar codec proofs. Do not report another helper-only success, diagnostic model or assumed public wrapper as the required bridge.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done for the permitted bounded negative result. Ground advancement remains unsupported.\n\nIndependent replay with Verus 0.2026.09.29.d85f757 and std+alloc reproduced both actual-crate results: blanket forwarding fails with the five-node Engine dependency cycle; direct extraction reaches proof queries and reports 8 verified, 1 error at encode_slice_inner’s encoded_len(...).expect(...) precondition. The minimal forwarding reduction also reproduces the cycle. Fresh review logs are in /tmp/t3-review-_c37hzc6.\n\nSource inspection and correspondence checks confirm the selected public statements, single AsRef calls and first-layer statements are preserved under the declared hoisting, bound and capability renames. Production is clean at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79; restored Engine, decode and GeneralPurpose match production.\n\nThis refutes blanket forwarding as constructed and supports direct extraction as a frontend route. It establishes no new round-trip guarantee or production bug. Extraction changes implementor syntax, associated-item ownership and trait imports; its broader compatibility mapping remains unproved. The handoff explicitly identifies this limitation rather than silently adopting changed public requirements.\n\nThe retained AIR includes actual slice and inner-body queries, but no attached success/data/frame contracts. Contractless checks cannot establish the required bridge. Ordinary slice AsRef identity, STANDARD selection and capacity premises, the decoded estimate chain, exact-prefix caller, and contract completeness attack remain open. Diagnostic lower boundaries receive no permanent TCB acceptance. Deferring the repeated completeness attack until usable contracts exist is justified.\n\nContinue planning in Ground using this narrowed interface result; preserve the original domain and mandatory guarantees. Broad scalar proofs remain deferred."
+      }
+    },
+    {
+      "id": "t4",
+      "title": "t4: Establish a contracted slice-body bridge using the extraction route that reaches proof queries.",
+      "from": "planner",
+      "objective": "t4: Establish a contracted slice-body bridge using the extraction route that reaches proof queries.\n\nRemain in Ground. Read your live context and t3 handoff. Reuse the reviewed direct-extraction construction; blanket forwarding and same-bound hoisting are rejected routes. Production remains read-only at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79.\n\nThe immediate missing fact is a meaningful public slice contract consumed by the actual body and first layer. Attach the original numeric capacity domain and STANDARD configuration facts so encode_slice_inner proves encoded_len(...).expect(...) cannot fail. Then prove mandatory success, exact reported prefix/data and unchanged destination suffix from explicit lower contracts anchored to the actual codec dependencies. Check at least one actual public slice body and its first layer with these guarantees; contractless verification counts do not resolve this task. Lower codec contracts remain named Prove obligations, not permanent TCB.\n\nTreat extraction as a verification adaptation requiring correspondence, not an authorized product API redesign. Provide an explicit mapping for the selected GeneralPurpose implementation, associated types, trait-qualified calls, imports and default dispatch. Justify that all goal-relevant calls resolve to their original executable bodies. Preserve the generic public methods and their single AsRef calls; do not silently require production implementors to adopt a different API. If this mapping cannot establish selected-source correspondence, use the independently supplied concrete capability-witness route identified in t3 rather than retrying blanket forwarding.\n\nJustify ordinary byte-slice AsRef identity and effects for the intended caller while preserving the general actual-conversion semantics. No repeated-conversion equality, whole-T immutability or arbitrary user-code termination assumptions. Preserve the original representable capacity domain, arbitrary byte values and initial destination contents, mandatory success and full frames. Use STANDARD with std and implied alloc, no defaults or SIMD, and one common proof context.\n\nOnce the contracted bridge works, connect decoded_len_estimate through the actual estimate chain and recheck the existing exact-prefix round-trip caller against the public contracts. Repeat the source-bound completeness attack when those contracts are usable. Identify separately any remaining caller or Ground obligations; do not defer contract attachment merely because lower scalar bodies remain unfinished.\n\nReturn fresh commands/output and checked-body traces, attached contracts and consumption links, selected-source correspondence, updated graph and temporary proof debts, and Ground handoff. Use fresh writable evidence and serialize checkout mutations. A useful negative result must identify a new concrete semantic or correspondence obstacle with reproducible evidence and its dependent guarantee; another unchanged diagnostic run or contractless count is insufficient. Bound this task to the first contracted bridge and immediate consumer integration, deferring broad scalar proofs.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done. The contracted bridge and immediate consumer integration are independently supported.\n\nFresh isolated replay of probe-bridge.py returned 30 verified, 0 errors, exit 0. Source inspection and the binding checker confirm preserved executable wrappers, one AsRef call per method, original first-layer bodies and selected GeneralPurpose dependencies. The extraction mapping preserves selected default dispatch and associated types without requiring a production API change. Production remains clean at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79.\n\nThe attached contracts preserve the numeric domain, arbitrary bytes and destination contents, mandatory success, exact lengths/data and full suffix frames. The checked exact-prefix caller establishes their premises through the public sizing helpers. The ordinary slice conversion boundary has adequate standard-library source justification; it supplies no arbitrary-conversion purity or termination claim.\n\nAccept the repeated specdet attempt as substantive but inconclusive. The checked whole-output uniqueness supplement resolves the named output-underconstraint concern; it does not establish feasibility or lower codec correctness.\n\nThe Ground dimensions now have support for this conditional bridge. D-ENC, D-DEC and D-INIT remain explicit Prove obligations, so the production round-trip theorem remains open. Planner should hand this result to Manager for the Ground transition decision and retain those debts in the proof closure.\n\nReplay used /tmp/t4-review-j1er3aj_ because the workspace is read-only. Fresh output is review-replay.log there; the binding checker also passed with its production path set to the registered checkout. No candidate files were changed."
+      }
+    },
+    {
+      "id": "t5",
+      "title": "t5: Apply the accepted native transition by writing prove followed by a newline to /fastdata/v-boxiuli/noah/exp/ts/verification/.system-proof/phase; confirm its contents and return without other changes.",
+      "from": "planner",
+      "objective": "t5: Apply the accepted native transition by writing prove followed by a newline to /fastdata/v-boxiuli/noah/exp/ts/verification/.system-proof/phase; confirm its contents and return without other changes. Ground acceptance and its passing stage check are already recorded.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done. Independently confirmed verification/.system-proof/phase contains exactly `prove\\n` (bytes 70 72 6f 76 65 0a), as t5 requires. No repair needed."
+      }
+    },
+    {
+      "id": "t6",
+      "title": "t6: Discharge D-INIT by connecting STANDARD selection to the actual alphabet, tables and constructor.",
+      "from": "planner",
+      "objective": "t6: Discharge D-INIT by connecting STANDARD selection to the actual alphabet, tables and constructor.\n\nThe phase is now Prove, independently confirmed by t5. Read your engineer.prove.json context and the accepted t4 handoff. Preserve its checked public contracts, estimate chain and exact-prefix caller in one common verification context.\n\nThe next missing fact is concrete initialization correspondence: the provisional STANDARD selector and table functions must describe the actual runtime values consumed by encoding and decoding. Prove the actual GeneralPurpose::new aggregate initializer, its selected configuration, alphabet::STANDARD symbols and padding, and the actual encode_table/decode_table construction against the existing open meanings. Replace the D-INIT external constructor/opaque alphabet boundaries with checked actual bodies or explicit justified primitive interfaces. Establish the forward/inverse table facts needed by D-ENC and D-DEC, including the selected padding value, without independent uninterpreted tables or axioms asserting the desired inverse relation.\n\nKeep the original algorithms and initialization expressions. Work in verification only; production stays read-only at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79. Preserve the reviewed extraction/dispatch correspondence, STANDARD, --no-default-features --features std (std implies alloc), no SIMD, full numeric domain and mandatory public success/data/frame guarantees. No proof-specific semantic modes or new caller obligations.\n\nReintegrate the concrete initialization proof into the selected public contract context and rerun the checked slice bodies, sizing helpers and exact-prefix caller. D-ENC and D-DEC remain explicit unfinished implementation debts; do not claim a production round-trip theorem from this initialization result.\n\nReturn fresh verifier commands/output and actual-body binding evidence, the proved constructor/table contracts and their consumption links, an updated boundary/call-graph inventory showing exactly which D-INIT items are discharged, and source drift/correspondence. Use fresh writable evidence and serialize checkout mutations. If the task exposes a substantive representation or tool obstacle, retain a precise actual-source diagnostic and the smallest remaining goal-connected obligation rather than replacing initialization with a trusted model. Scope investigation to this shared codec prerequisite; defer scalar encode/decode proofs.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done. D-INIT is independently supported.\n\nFresh isolated replay of t6/probe.py returned 51 verified, 0 errors, exit 0. check-binding.py also passed. Evidence is under /tmp/t6-review-7gh656ib/verification: review-replay.log, review-binding.log and .system-proof/t6/run.json.\n\nSource inspection supports the claimed actual-body correspondence: the alphabet copy, table loops, constructor aggregates and STANDARD/PAD initialization expressions are preserved. Concrete array constructions replace the opaque initialization meanings; induction establishes the inverse and invalid-byte facts without an inverse axiom. Padding is 61 and excluded from valid decode entries; the selected configuration is established.\n\nThe initialization theorem is consumed by the checked config getter and exact-prefix caller in the same context as the unchanged public contracts, sizing helpers and slice bodies. Representation visibility and same-file impl relocation are acceptable verification elaborations for this selected graph. Production remains clean at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79.\n\nNonblocking: the caller's opening comment still describes the earlier unproved integration probe; its current status is a checked conditional caller.\n\nD-ENC and D-DEC remain unfinished implementation debts. This result discharges initialization correspondence, not the production round-trip theorem or Audit readiness. Retain those debts when selecting the next task."
+      }
+    },
+    {
+      "id": "t7",
+      "title": "t7: Discharge D-ENC over the actual STANDARD scalar encoding and padding path.",
+      "from": "planner",
+      "objective": "t7: Discharge D-ENC over the actual STANDARD scalar encoding and padding path.\n\nRemain in Prove. Read your current context and accepted t6 handoff. D-INIT is independently discharged; use its concrete table/configuration theorem as the shared prerequisite. D-DEC remains open.\n\nProve the actual encode_with_padding dependency chain: GeneralPurpose::internal_encode -> encode_helper -> scalar processing/tail, followed by add_padding. Establish the exact unpadded reported length and bytes, bounds and preserved suffix, then canonical padding and the full encoded prefix required by the existing public contract. Cover arbitrary byte values and all lengths in the original representable capacity domain, including empty input and every block/tail case. Prove arithmetic, indexing and expect/debug-assert obligations; do not allow internal errors or panics as substitutes for success.\n\nReplace the provisional ex_encode_with_padding boundary and internal_encode trust with actual-body proofs consumed by the existing encode_slice first layer. Use the actual scalar callbacks and concrete STANDARD tables. Preserve executable algorithms and source locations; supporting lemmas must be consumed by those bodies. If one dependency requires a substantial separate proof, return the precise remaining edge and its consumer, with the completed source-bound portion reintegrated.\n\nKeep the accepted public contracts, generic conversion semantics, full frames, numeric domain and extraction correspondence unchanged in meaning. Work only in verification. Production remains clean/read-only at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79. Configuration remains STANDARD, --no-default-features --features std with implied alloc, no SIMD or proof-specific semantic modes.\n\nRerun the checked sizing helpers, initialization, public slice bodies and exact-prefix caller in the common context. The caller remains conditional on D-DEC; state that limitation explicitly. Correct its stale opening comment describing it as an unproved probe.\n\nReturn fresh verifier commands/output, checked-body binding and source correspondence, contracts and consumption links, and an updated call-graph/boundary inventory identifying precisely which D-ENC obligations are discharged. Use fresh writable evidence and serialize checkout mutations. A negative result must identify a concrete actual-source obstruction or counterexample and a non-weakening next step. Do not expand into arbitrary configurations, malformed decoding or unrelated APIs.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done for the permitted partial result. The checked upper encoding/padding chain is reintegrated; retained evidence reports 57 verified, 0 errors. D-ENC remains open precisely at encode_helper -> encode_scalar_tail, with unsupported read_u64 primitive interfaces documented. The caller remains conditional on that scalar obligation and D-DEC. Remain in Prove.\n\nReview limitation: my replay stopped before verification because verification/src/lib.rs is mounted read-only. This does not contradict the retained result. No repair requested. Handoff paths below are outside hidden folders."
+      }
+    },
+    {
+      "id": "t8",
+      "title": "t8: Prove the remaining actual scalar encoding body and close D-ENC.",
+      "from": "planner",
+      "objective": "t8: Prove the remaining actual scalar encoding body and close D-ENC.\n\nRemain in Prove. Read your live context and verification/t7-handoff/handoff.md. Reuse the accepted upper encoding/padding chain and D-INIT proof. The exact remaining edge is encode_helper -> encode_scalar_tail, including read_u64. D-DEC stays open.\n\nFirst resolve the retained primitive-interface obstacle for the actual read_u64 expression u64::from_be_bytes(s[..8].try_into().unwrap()). Supply narrowly justified standard-library interfaces for fixed-array conversion and big-endian byte interpretation, prove the eight-byte bound and conversion/unwrap success, and inventory their precise trust conditions. Do not trust read_u64 itself or replace its executable expression with another implementation.\n\nRemove encode_scalar_tail's provisional external_body and prove its actual four-unrolled u64 block loop, ordinary three-byte loop and terminal cases. Establish exact unpadded report/data, bounds, arithmetic safety and full suffix preservation over the original domain and arbitrary bytes. Use the concrete STANDARD table theorem and invariants/bit lemmas consumed by these bodies. Account for the 26-byte readable fast-path window and 24-byte consumption; no block-length restrictions or new public premises are permitted.\n\nReintegrate into the common t7 context and rerun initialization, helpers, upper encoding/padding, actual public slices and exact-prefix caller. Remove only boundaries actually discharged; the caller will remain conditional on D-DEC. Preserve production revision 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79, read-only production, selected STANDARD std configuration with implied alloc, no defaults/SIMD, accepted correspondence and unchanged public contracts.\n\nReturn fresh verifier output, checked-body traces, primitive-interface source justification, source binding/drift checks and updated boundary/graph evidence. Keep review-facing handoff and replay instructions accessible outside hidden directories. Provide a replay route that can install adaptations in an isolated writable copy when the review mount is read-only, with explicit registered-source identity checks; inability to mutate the review mount should not prevent independent verification.\n\nIf full scalar closure reveals a substantial separate dependency, return a genuinely checked and reintegrated portion with the precise remaining consumer edge and reproducible obstruction. Do not count boundary relocation or a diagnostic model as D-ENC completion. Defer decoder work and unrelated configurations.",
+      "status": "closed",
+      "holder": "engineer",
+      "note": {
+        "from": "engineer",
+        "text": "t8 needs replanning around two verifier/vstd prerequisites: from_be_bytes array-constant signature matching and the missing TryInto array contract bridge. D-ENC remains open; no actual scalar body was proved. Fresh common-context verification passed 58 obligations: the existing 57 plus one diagnostic helper. Isolated writable-copy replay reproduced the successful baseline and expected failures. Production is unchanged; remain in Prove. The handoff contains source justification, binding checks, boundary inventory and replay instructions."
+      }
+    },
+    {
+      "id": "t9",
+      "title": "t9: Resolve the two primitive-interface prerequisites for unchanged read_u64.",
+      "from": "planner",
+      "objective": "t9: Resolve the two primitive-interface prerequisites for unchanged read_u64.\n\nRemain in Prove. Read your live context and verification/t8-handoff/handoff.md. D-ENC and D-DEC remain open; the additional diagnostic helper is not scalar proof progress.\n\nEstablish a usable, justified interface for the exact production expression u64::from_be_bytes(s[..8].try_into().unwrap()). Address both retained obstacles: external signature matching of equivalent array-length constants, and the missing vstd TryInto/TryFrom array contract connection. Use a narrowly adapted verification-local toolchain/library copy if necessary; do not modify production or shared installed Verus/vstd. Preserve original tool identities, patches and reproducible build/replay commands. Tool/library adaptations are explicit verification dependencies requiring independent review, not codec changes.\n\nFor signature normalization, preserve type equality checks: normalize/evaluate justified array constants rather than accepting arbitrary lengths. Include meaningful positive and negative regression cases proving equivalent lengths are accepted and unequal lengths remain rejected. For the conversion bridge, justify the actual core blanket TryInto dispatch and fixed-array conversion from the selected Rust source; test exact-length success/copy and mismatched-length failure. Do not introduce a blanket call_ensures axiom, trust read_u64, or replace try_into with direct TryFrom in production code.\n\nThe reviewable semantic result is a checked actual read_u64 body at its source location, proving eight-byte availability, conversion/unwrap safety and exact big-endian byte interpretation. Retain all primitive trust conditions explicitly. Supporting reductions are diagnostic only. If one prerequisite remains blocked, return the resolved prerequisite with its regression evidence and the precise remaining obstacle; do not repeat unchanged failures.\n\nReintegrate the successful interface into the common upper-codec/caller proof context and rerun its existing checks. Preserve STANDARD, std with implied alloc, no defaults/SIMD, original domain/contracts, source correspondence and revision 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79. Scalar loops and D-DEC remain deferred in this prerequisite task.\n\nProvide fresh readable output, actual-body binding, explicit tool/library drift and TCB impact, and an isolated writable-copy replay route with registered-source identity checks. Keep review-facing handoff outside hidden directories. No production round-trip or D-ENC completion claim is warranted until the actual scalar loops are proved.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done. Both primitive prerequisites and the unchanged actual read_u64 body are independently supported. Fresh isolated replay passed signature/conversion regressions, source-binding checks, and the common context: 59 verified, 0 errors. Production and installed Verus sources remain clean.\n\nReviewed and accepted the explicit primitive TCB: closed-constant normalization, slice-to-array conversion and blanket dispatch contracts, and big-endian interpretation. Unequal-length signature regressions fail in Rust before the patched matcher; they establish pipeline rejection, not isolated fallback coverage. This is nonblocking.\n\nThe prerequisite frontier is resolved. D-ENC scalar loops and D-DEC remain open; the caller remains conditional. Remain in Prove. Planner should select the next proof task."
+      }
+    },
+    {
+      "id": "t10",
+      "title": "t10: Prove the actual scalar encoding loops and discharge D-ENC.",
+      "from": "planner",
+      "objective": "t10: Prove the actual scalar encoding loops and discharge D-ENC.\n\nRemain in Prove. Read your live context and accepted verification/t9-handoff/handoff.md. Both primitive prerequisites and unchanged read_u64 are independently supported; reuse that reviewed local toolchain/library route and explicit primitive TCB. Do not reopen resolved interfaces without new evidence.\n\nRemove encode_scalar_tail's provisional external_body and prove its actual four-unrolled u64 block loop, ordinary three-byte loop, two-byte tail, one-byte tail and empty case. Establish the exact unpadded reported length and canonical bytes, all indexing/arithmetic safety and full destination suffix preservation over the original capacity domain and arbitrary bytes. Account explicitly for the fast path's 26 readable bytes, 24 consumed bytes and 32 output bytes. Consume checked read_u64 and the concrete STANDARD table theorem; prove necessary bit/arithmetic lemmas rather than assuming byte correspondence.\n\nReintegrate the result through checked encode_helper, GeneralPurpose::internal_encode, encode_with_padding and public encode_slice. Success means D-ENC's actual codec bodies are checked and its provisional scalar boundary is removed. Preserve the existing mandatory public success/data/frame contracts, generic conversion semantics, full numeric domain, original algorithms and accepted extraction correspondence. Production stays read-only at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79; configuration remains STANDARD, std with implied alloc, no defaults or SIMD.\n\nRerun the common initialization, sizing, public slice and exact-prefix caller checks with the reviewed toolchain adaptations. D-DEC remains explicit proof debt, so even completed D-ENC does not establish the production round-trip theorem.\n\nReturn fresh verifier output and actual-body traces, binding/drift checks, consumed lemma/contract links and updated call-graph/boundary inventory. Preserve an isolated writable-copy replay route with registered-source identities, and place review-facing instructions outside hidden directories. If a substantial new dependency blocks full closure, return a genuinely checked and reintegrated scalar portion with the precise remaining edge and non-weakening next step; boundary relocation and diagnostic counts alone are insufficient. Defer decoder and unrelated configuration work.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done. D-ENC is independently supported.\n\nFresh isolated replay passed primitive regressions, the 59-obligation baseline, source-binding checks and the full scalar/common context: 84 verified, 0 errors. Inspection confirms the unchanged actual scalar body, checked bit lemmas, full capacity domain, exact canonical bytes/length, arithmetic/index safety and suffix preservation. The checked public encoding chain consumes this result. Production remains clean at the fixed revision; inherited primitive TCB remains explicit.\n\nNonblocking: inherited documentation retains stale scalar-debt/bridge warnings. Review replay evidence is retained at /tmp/base64-t10-independent-review/t10-handoff; the registered verification mount rejected artifact writes as read-only.\n\nD-DEC remains explicit debt, and the caller remains conditional on it. No production round-trip theorem is established. Remain in Prove; select the next task."
+      }
+    },
+    {
+      "id": "t11",
+      "title": "t11: Prove the actual STANDARD decoding path for encoder-produced prefixes and discharge D-DEC.",
+      "from": "planner",
+      "objective": "t11: Prove the actual STANDARD decoding path for encoder-produced prefixes and discharge D-DEC.\n\nRemain in Prove. Read your live context and accepted t10 handoff. D-INIT and D-ENC are independently supported; reuse their concrete initialization, canonical encoded-byte meaning, primitive interfaces and common replay route.\n\nThe remaining top-level dependency is GeneralPurpose::internal_decode -> decode_helper -> complete_quads_len, decode_complete_quads/chunk helpers and decode_suffix. Prove these actual bodies accept every prefix produced by the selected encoder under the original capacity conditions, return successful metadata with exactly the original length and bytes, and preserve the entire destination suffix. Prove all bounds, arithmetic and panic/error exclusions. Errors in internal helpers are not permitted outcomes for this domain. Arbitrary malformed external strings remain outside scope.\n\nUse the concrete inverse-table and padding facts, selected trailing-bit/padding configuration, checked estimate chain and actual pure-scalar callback. Cover empty input, each source-length remainder, all block boundaries and arbitrary byte values. Keep canonical output-to-original relationships open and consumed by the actual bodies; do not assume decoder correctness or replace scalar code with a model.\n\nRemove provisional decoder boundaries only when their bodies are checked. Reintegrate into the existing public decode_slice first layer and exact-reported-prefix caller, preserving mandatory success, full framing, original numeric domain and generic conversion semantics. If a substantial separate decoder dependency prevents full closure, return a genuinely checked upper or lower portion with exact remaining call edges, contracts and their consumers; boundary relocation alone is not discharge.\n\nProduction stays read-only at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79. Preserve STANDARD, std with implied alloc, no defaults/SIMD, accepted source correspondence and the reviewed explicit primitive TCB. Any newly needed primitive interface needs narrow source justification and meaningful regression evidence.\n\nRerun the complete common context, including encoding, initialization, sizing, both public APIs and caller. Return fresh output, actual-body traces, source binding/drift checks and a complete updated goal-relevant boundary inventory. Retain isolated writable-copy replay and accessible review-facing handoff. Correct stale scalar-debt warnings in current authoritative documentation while preserving historical evidence. Even successful decoder closure requires independent review and Audit before final completion; do not advance the phase yourself.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done for the permitted partial result.\n\nIndependent isolated replay passed primitive regressions, t9 and t10 baselines, source-binding checks, and the complete t11 context: 88 verified, 0 errors. Actual internal_decode, decode_helper and complete_quads_len are checked and consumed through public decode_slice and the exact-prefix caller. Mandatory success, original domain, canonical byte relationships and full suffix framing are preserved. No blocking fault found.\n\nD-DEC remains open at decode_complete_quads, its chunk helpers, and decode_suffix. Iterator-interface diagnostics support this bounded frontier; no new primitive trust was introduced. The caller remains conditional on these decoder obligations, so the original round-trip goal is incomplete. Production remains clean at the fixed revision; phase remains Prove.\n\nFresh review evidence is retained in /tmp/base64-t11-independent-review/t11-handoff. Planner should select the next decoder task."
+      }
+    },
+    {
+      "id": "t12",
+      "title": "t12: Establish the iterator interfaces needed by the actual decoder bodies.",
+      "from": "planner",
+      "objective": "t12: Establish the iterator interfaces needed by the actual decoder bodies.\n\nRemain in Prove. Read your live context and verification/t11-handoff/handoff.md. Reuse the independently supported upper decoder, D-INIT and D-ENC. The current blockers are actual-source Enumerate and ChunksExact/chunks_exact interfaces; D-DEC remains open at complete-quads/chunk processing and decode_suffix.\n\nResolve this shared prerequisite with narrowly justified interfaces for the exact iterator operations used by those bodies. Establish iteration order, exact yielded byte/subslice contents, offsets, exhaustion and remainder behavior needed to prove bounds and framing. Inspect the selected core/vstd implementations; avoid broad iterator/call axioms. Prefer existing checked library support. If a library adaptation is necessary, keep it verification-local, record its source identity and trust impact, and supply positive, empty/terminal and mismatched-bound regression checks appropriate to its guarantees.\n\nPreserve the actual decoder loops and executable expressions; do not replace iteration with a new codec implementation. Bring the actual complete-quad and suffix bodies past their documented frontend obstacles in the common context. Extract/annotate the original chunk helpers at their source locations where required. Complete at least one goal-connected checked body or consumed iterator proof connection where feasible; diagnostic reductions alone must be identified as prerequisite evidence, not decoder correctness.\n\nRetain the existing canonical decode contracts: mandatory success on every encoder-produced prefix, exact original length/bytes, original capacity domain, arbitrary initial destination contents and full suffix preservation. No new caller obligations, block restrictions or internal-error exceptions. Decoder byte reconstruction and terminal acceptance not proved here remain explicit named debts with exact consuming edges.\n\nProduction stays read-only at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79. Keep STANDARD, std with implied alloc, no defaults/SIMD, accepted correspondence and reviewed primitive TCB. Rerun the complete common context after integrating interfaces and retain source-binding checks, fresh output, actual-body traces, boundary inventory and an isolated writable-copy replay route. Place review-facing handoff outside hidden directories.\n\nA useful negative result must isolate a new concrete interface obstacle and a materially different, non-weakening route. Do not retry unchanged t11 diagnostics or claim D-DEC discharge from interface-only checks. Defer unrelated decoder configurations and malformed external inputs.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done for the permitted bounded prerequisite result.\n\nIndependent isolated replay at /tmp/t12-independent-review-1103 passed the t9–t11 baselines, all iterator regressions, expected actual-body diagnostics, source-binding checks, and the complete common context: 103 verified, 0 errors.\n\nI accept the explicit verification-local Enumerate/ChunksExact library TCB expansion for the selected immutable forward operations. Source inspection supports ordered contents, offsets, exhaustion and fixed remainder behavior. These are trusted core interfaces, not checked core-body proofs; the retained vstd build reports 2059 verified, 0 errors.\n\nThe actual complete_quads_len body consumes the checked partition lemma. Original quad loops consume the iterator/window interfaces and reach unpaid success/data/frame obligations. The suffix passes its former iterator obstacle and reaches the independently reproduced unsupported continue. Original chunk helpers expose the new u32/u64::to_be_bytes obstacles. Executable correspondence and canonical decode contracts are preserved.\n\nD-DEC-Q and D-DEC-S remain open, including byte reconstruction, terminal acceptance and full framing. The documented primitive-interface and continue-lowering routes preserve the original goal. Production remains clean at the required revision; remain in Prove. No Engineer repair is required. Planner should select the next bounded frontier."
+      }
+    },
+    {
+      "id": "t13",
+      "title": "t13: Prove the actual decoder chunk helpers using justified to_be_bytes interfaces.",
+      "from": "planner",
+      "objective": "t13: Prove the actual decoder chunk helpers using justified to_be_bytes interfaces.\n\nRemain in Prove. Read your live context and accepted verification/t12-handoff/handoff.md. Reuse the reviewed iterator interfaces, initialization/table inverse facts, encoding proof and common context. D-DEC-Q and D-DEC-S remain open.\n\nResolve the concrete u32::to_be_bytes and u64::to_be_bytes frontend obstacles with narrow source-justified primitive interfaces or checked bridges. Preserve the actual expressions. Record exact byte-order semantics and trust conditions; add symbolic positive and negative regression checks for byte positions and reconstruction. Reuse the reviewed signature-normalization route as appropriate rather than weakening signature matching or assuming codec correctness.\n\nThen remove the provisional external_body markers from the actual chunk4/chunk8 helpers and prove their success, exact reconstruction, bounds and write frames on canonical nonterminal input under the concrete STANDARD decode table. Preserve executable tokens and original source locations. Prove bit/table facts with consumed lemmas; do not make inverse decoding a new axiom. Contracts may specialize to the actual encoder-produced domain but must cover every such input and remain obtainable from the existing caller/loop invariants.\n\nReintegrate checked chunk contracts into decode_complete_quads. If feasible, prove that actual loop's exact prefix and complete destination frame; otherwise identify its precise remaining invariant/body obligations and demonstrate that it consumes the checked helpers. D-DEC-S and its unsupported continue remain deferred. Do not retry the unchanged suffix diagnostic.\n\nPreserve mandatory success, full representable capacity domain, arbitrary bytes/initial destination contents, exact reported-prefix use and public contracts. Production remains read-only at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79; retain STANDARD, std with implied alloc, no defaults/SIMD and accepted correspondence. Keep all tool/library adaptations verification-local with explicit TCB and patches.\n\nRerun the complete common context and source-binding checks. Return fresh output and actual-body traces, consumed contracts/lemmas, updated D-DEC-Q frontier and boundary inventory, accessible handoff and isolated writable-copy replay with registered-source identities. A primitive-interface-only result must be labeled partial; no D-DEC or round-trip completion claim is justified while chunk/loop/suffix debts remain.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done. D-DEC-Q is independently supported. Isolated replay passed the full common context (128 verified, 0 errors), source binding, inherited regressions, and positive/negative byte-order checks. Actual chunk and quad-loop bodies establish success, exact reconstruction/prefix, bounds and full destination frames while preserving executable tokens and public contracts.\n\nAccept the two narrow to_be_bytes interfaces as explicit primitive TCB under the documented compiler, endian and layout conditions; retained core source correspondence independently matches. No repair required.\n\nD-DEC-S remains open; D-DEC and round-trip completion are not established. Remain in Prove. Planner holds the remaining work. Fresh evidence is at /tmp/base64-t13-independent-review/t13-handoff; the registered verification filesystem rejected evidence-copy writes as read-only."
+      }
+    },
+    {
+      "id": "t14",
+      "title": "t14: Resolve for-loop continue lowering and prove the actual terminal decoder suffix.",
+      "from": "planner",
+      "objective": "t14: Resolve for-loop continue lowering and prove the actual terminal decoder suffix.\n\nRemain in Prove. Read your current context and accepted t13 handoff. D-INIT, D-ENC and D-DEC-Q are independently supported. The remaining codec debt is D-DEC-S: decode_helper -> actual decode_suffix.\n\nAddress the retained Verus limitation, 'for-loops do not yet support continue', through a narrowly scoped verification-local lowering repair that preserves the original loop and continue semantics. Correctly advance ghost iterator state on the continue edge and preserve loop invariants, termination and control-flow meaning. Do not merely delete the guard or rewrite the codec. Retain the tool patch, build identity and source rationale. Include meaningful positive and negative regression cases for skipped iterations, offsets/exhaustion, state/frame effects and invariant checking at continue edges. Keep installed tools and production unchanged.\n\nUsing the repaired route, remove decode_suffix's provisional external_body and prove its actual terminal iteration and branches: acceptance of every canonical encoder-produced terminal region, correct padding/trailing-bit checks, bounds and output get_mut/ok_or success, exact final metadata length and recovered bytes, and the complete unchanged destination suffix. Cover empty input and all source-length remainders for the original domain and arbitrary bytes. Establish its preconditions from the existing checked upper decoder and quad-prefix guarantees; no new public premises or permitted internal errors.\n\nReintegrate into the complete common context so actual public decode_slice and the exact-reported-prefix caller consume checked decoder bodies. Preserve mandatory success, full framing, original numeric domain, generic conversion semantics and executable/source correspondence. Configuration remains STANDARD, std with implied alloc, no defaults/SIMD; original revision is 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79.\n\nReturn fresh verifier output, actual-body traces, source binding/drift, tool repair regression evidence and TCB impact, and a complete goal-relevant boundary inventory. Retain isolated writable-copy replay with registered-source identities and accessible review-facing handoff. If the lowering repair is a substantial separate prerequisite, return its independently replayable result with the exact remaining suffix obligations; do not call it D-DEC-S discharge. Even full codec closure requires independent Audit before original-goal completion. Do not change the phase.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done for the permitted separate prerequisite. Independent source review supports the continue lowering: wrapper next already advances ghost state; continue retains invariant and decreases checks. No blocking fault found.\n\nFresh isolated replay at /tmp/t14-review-independent-20261103 passed inherited regressions, all eight continue cases, source binding, and the common context: 128 verified, 0 errors. The actual suffix reaches semantic obligations, including checks at continue, and fails as documented.\n\nD-DEC-S remains open. Plan the remaining terminal acceptance, bounds, reconstruction, metadata and full-frame proof described in remaining-suffix.md. Production is clean; phase remains Prove. Original-goal completion still requires Audit."
+      }
+    },
+    {
+      "id": "t15",
+      "title": "t15: Prove terminal suffix acceptance and recovery, closing D-DEC-S.",
+      "from": "planner",
+      "objective": "t15: Prove terminal suffix acceptance and recovery, closing D-DEC-S.\n\nRemain in Prove. Read your live context and verification/t14-handoff/remaining-suffix.md. Reuse the independently accepted continue lowering, iterator interfaces, D-INIT, D-ENC and D-DEC-Q. The actual suffix now reaches semantic queries; do not repeat frontend diagnosis.\n\nRemove decode_suffix's provisional external_body and discharge its unchanged canonical success/data/length/full-frame contract. Obtain the source witness from decodable and connect the existing quad_end/input/output indices and recovered prefix. Annotate the actual enumerate loop with consumed-symbol, padding, last-value, morsel and unchanged-output invariants, including iterator laws and decreases at ordinary and continue edges. Prove table inversion and canonical padding exclude every early error and panic path.\n\nProve all post-loop padding and length checks, exact remaining byte count for empty and all three source remainders, valid shifts, zero missing morsels and accepted trailing bits. Use checked bit/table lemmas to establish byte reconstruction. Annotate the actual output loop to prove get_mut/ok_or success, safe increments, exact writes and preserved suffix. At the original metadata constructor establish total original length and the universal source-byte guarantee without new caller premises.\n\nPreserve original executable loops, continue and expressions; original domain and arbitrary bytes/destination contents; mandatory success; generic conversion semantics; and accepted correspondence. Production remains read-only at 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79. Keep STANDARD, std with implied alloc, no defaults/SIMD and the reviewed verification-local tool/library dependencies.\n\nReintegrate the checked suffix through the upper decoder, actual public decode_slice and exact-prefix caller in one common context. Rerun the complete proof, inherited regressions and source binding. Return fresh output, actual-body traces, consumed lemma links and a complete goal-relevant boundary/TCB inventory identifying whether all codec debts are discharged. Preserve accessible handoff and isolated writable-copy replay with registered-source identities.\n\nIf a substantial new dependency prevents closure, return a genuinely checked/reintegrated portion and the exact remaining obligation; diagnostic counts or relocated trust do not establish suffix correctness. Even successful closure needs independent Audit before completion. Do not change the phase.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done. D-DEC-S is independently supported.\n\nSource inspection and fresh isolated replay passed: 146 verified, 0 errors; all four inherited regression suites; executable source binding; unchanged public and suffix contracts; clean production; phase remains Prove. Replay evidence is retained at /tmp/t15-reviewer-replay-20261103/t15-handoff/.\n\nThe actual suffix proves canonical acceptance, exact length and byte recovery, and the full destination frame, including empty input and all source remainders. Its checked consumers include the upper decoder, public decode_slice and exact-prefix round-trip caller in one common context. No codec proof debt remains on that path, subject to the inventoried inherited TCB.\n\nNonblocking: historical source comments still describe discharged debts as open; the handoff explicitly supersedes them.\n\nThe candidate is supported for independent Audit consideration. Original-goal completion and acceptance of the remaining TCB still require Audit; no phase change was made."
+      }
+    },
+    {
+      "id": "t16",
+      "title": "t16: Apply the Manager-authorized Prove → Audit transition by writing audit followed by a newline to /fastdata/v-boxiuli/noah/exp/ts/verification/.system-proof/phase; confirm its exact contents and return for independent review without other changes.",
+      "from": "planner",
+      "objective": "t16: Apply the Manager-authorized Prove → Audit transition by writing audit followed by a newline to /fastdata/v-boxiuli/noah/exp/ts/verification/.system-proof/phase; confirm its exact contents and return for independent review without other changes. Prove acceptance and its passing stage check are already recorded.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done. Independently confirmed verification/.system-proof/phase contains exactly `audit\\n` (bytes 61 75 64 69 74 0a). The authorized Prove → Audit transition is established. No repair needed; original-goal acceptance remains for Audit."
+      }
+    },
+    {
+      "id": "t17",
+      "title": "t17: Audit the complete actual-API round-trip candidate and prepare the final evidence/report for independent judgment.",
+      "from": "planner",
+      "objective": "t17: Audit the complete actual-API round-trip candidate and prepare the final evidence/report for independent judgment.\n\nPhase is Audit. Read your engineer.audit.json context, Engineer Audit guidance, the final-report contract and skills/reviewer/final-system-proof-report.md. Audit the fixed t15 candidate; perform no substantive proof, specification or tool repair. Any material gap must be returned for rollback to Prove.\n\nFreshly replay the complete candidate using its isolated writable-copy route, verifying registered production revision 5d574f8ad899aa9168aa0d25ad03ef634fc4ae79 and cleanliness, source/package/tool identities, all inherited regressions and actual-body binding. Retain readable commands/output and traces. Independently inspect that the actual encode_slice/decode_slice wrappers, first layers, sizing helpers, concrete initialization, scalar codec bodies and source-grounded exact-prefix caller coexist and are checked in the same context. Counts alone are insufficient.\n\nJudge the original request explicitly: mandatory success across the independently justified representable capacity domain; arbitrary bytes and boundary lengths; exact returned prefixes/lengths and recovered data; unchanged input bytes and both destination suffixes; arbitrary prior buffer contents; actual single-conversion generic semantics and justified ordinary-slice caller. State the difference between helper usize limits, realizable slice limits and obtaining lawful buffers. Verify no hidden caller premise, error allowance or proof-specific semantic mode narrows the goal.\n\nInspect the complete goal-relevant call graph and every external_body, opaque/uninterpreted, assumed, axiomatic or admitted boundary, including verification-local compiler/vstd patches. Provide explicit source-supported acceptance rationale and conditions for each remaining TCB item; distinguish trusted core interfaces from checked core implementations. Confirm unrelated external convenience APIs do not supply a selected claim. Review production/verification correspondence, extraction/dispatch mapping and unchanged executable algorithms. Preserve STANDARD, std with implied alloc, no defaults/SIMD.\n\nPrepare verification/.system-proof/final-report.md in the required TOML-frontmatter-plus-Markdown format, with complete entries for all four requested APIs, complete TCB inventory, valid source line links, metrics tied to evidence, original revision/configuration, tool adaptations, established behavior and environmental limitations. Present it for independent Reviewer judgment and finalization; do not claim Reviewer acceptance yourself. Retain an accessible audit handoff and durable replay evidence rather than relying solely on ephemeral /tmp paths.\n\nCompletion recognition requires fresh actual-body evidence, complete closure/boundary inventory, explicit TCB judgments and independent Reviewer acceptance of audit.formal-evidence, audit.code-binding and audit.original-goal. Report any material gap precisely and request rollback instead of repairing it in Audit. Do not change the phase or declare campaign completion.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Corrected delivery paths are accessible outside hidden folders. Open the proposed final report, audit handoff and verifier output below. This corrects the delivery only; independent acceptance of audit.formal-evidence, audit.code-binding and audit.original-goal remains outstanding. The report remains conditional, and phase remains Audit."
+      }
+    },
+    {
+      "id": "t18",
+      "title": "t18: Finalize the Audit delivery for explicit independent acceptance.",
+      "from": "planner",
+      "objective": "t18: Finalize the Audit delivery for explicit independent acceptance.\n\nRemain in Audit. Use t17-audit-delivery/final-report.md, handoff.md and verify.log, together with the authoritative verification/.system-proof/t17 evidence. No substantive repair is authorized.\n\nThe latest Reviewer letter explicitly leaves audit.formal-evidence, audit.code-binding and audit.original-goal outstanding. Present the fixed candidate and complete TCB/report for an explicit accept-or-reject disposition on each item. Do not equate delivery correction or successful replay with independent acceptance.\n\nInspect whether the earlier Reviewer finalization artifacts retained under /tmp/t17-review-evidence are available and correspond exactly to this candidate. If available, preserve their evidence and proposed finalization durably, identifying their provenance; do not treat them as overriding the latest disposition. Otherwise use the current proposed report. Ensure the canonical verification/.system-proof/final-report.md and accessible delivery agree, all report/source links resolve, and the contracted report and Audit stage checks pass. Preserve original production revision, configuration, domain, source correspondence and declared trust conditions.\n\nReturn the report and audit evidence for Reviewer finalization. Reviewer should explicitly judge each protected Audit item and each remaining TCB condition, recording acceptance in the final report or identifying a concrete gap requiring rollback. If accepted, install the Reviewer-approved finalization through an authorized writable session and retain checks/evidence; no phase change is needed. No Engineer self-certification of Reviewer acceptance or campaign completion is permitted.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Corrected delivery: open the accessible report, handoff and verifier output listed below. The report remains conditional; this path correction does not establish independent Audit acceptance or installation. The reported /tmp/t18-review-evidence package is absent, so approved-finalization installation remains unconfirmed. Phase remains Audit."
+      }
+    },
+    {
+      "id": "t19",
+      "title": "t19: Install a durable final report carrying the recorded independent Audit acceptance.",
+      "from": "planner",
+      "objective": "t19: Install a durable final report carrying the recorded independent Audit acceptance.\n\nRemain in Audit. The Manager confirms that the t18 project event record explicitly accepts audit.formal-evidence, audit.code-binding, audit.original-goal and TCB-01 through TCB-26. The remaining gap is report delivery and installation, not codec proof work. The approved /tmp package is unavailable; do not depend on it.\n\nRead the exact t18 acceptance from home/projects/p-3bc83011/events.jsonl and reconcile it with the latest conditional report. Preserve the acceptance text and provenance in an accessible durable artifact under t19-audit-delivery. Prepare a finalization patch against the current canonical report that records precisely that acceptance, keeping all established claims, limitations, TCB conditions and source identities unchanged. Present that patch and complete report to the independent Reviewer for explicit approval; do not infer new acceptance or certify it yourself.\n\nOnce Reviewer approval is available, install the approved text at verification/.system-proof/final-report.md and synchronize an accessible t19-audit-delivery/final-report.md. Confirm byte equality, record hashes and installation paths, and run the report contract, source-link and required Audit stage checks. Retain their readable output durably outside /tmp and hidden-only delivery paths. Reviewer must confirm the installed report matches the approved text and explicitly state whether completion requirements are satisfied.\n\nIf the review environment cannot write, it should return the approved complete report or exact patch through the durable task delivery for an authorized writable Engineer installation. A delivery correction must distinguish report-copy installation status from the already recorded semantic acceptance. Do not restart the proof, alter the candidate or phase, or leave installation implicit. Return concrete installed paths, hashes, checks and Reviewer disposition for the Manager’s completion decision.",
+      "status": "closed",
+      "holder": "reviewer",
+      "note": {
+        "from": "reviewer",
+        "text": "Disposition: done. Independently confirmed the canonical verification/.system-proof/final-report.md, accessible t19-audit-delivery/final-report.md, and approved proposal are byte-identical. SHA-256: b6e5e537cd033d3d297a7acb0bd6c2fdc6b5795d09b09e498c56899837155961. The accessible report is a regular file. Approval matches the recorded t19 Reviewer event; the report preserves the recorded t18 semantic acceptance and declared trust conditions.\n\nFresh canonical link validation passed: 145 links, zero errors. Required Audit stage check, including the report contract, passed with exit 0. Phase remains exactly audit\\n. Durable Engineer check outputs are available below; this read-only review environment could not save an additional replay log.\n\nCompletion requirements are satisfied under the accepted TCB conditions. Installation is explicitly confirmed; the Manager may now make the campaign completion decision. Nonblocking delivery limitation: relative links in the accessible byte-identical copy retain canonical-path context, as its handoff explains."
+      }
+    }
+  ],
+  "inbox": [],
+  "sessions": {
+    "manager": "01a1a005-9555-71a3-a8e0-1d334c6b21f9",
+    "planner": "01a1a005-cd37-70c2-8792-641310d6ca2f",
+    "t1.engineer": "01a1a006-3c75-7820-a890-7cab83719558",
+    "t2.engineer": "01a1a00e-428f-73b2-8eb1-25a3f0046646",
+    "t3.engineer": "01a1a012-50e4-79a2-aa65-6ad1f3df55fd",
+    "t4.engineer": "01a1a016-d84c-7be3-ace3-241c01916fe0",
+    "t5.engineer": "01a1a024-359f-7412-adcc-eaa37a815f79",
+    "t6.engineer": "01a1a024-b7b2-79c2-96fe-acda5d83697b",
+    "t7.engineer": "01a1a02a-bfca-7e42-93a7-72f16beb8251",
+    "t8.engineer": "01a1a030-c45d-7ee1-8ec7-25c902a66eed",
+    "t9.engineer": "01a1a036-bd3a-70a3-bc6c-1d731cfe427c",
+    "t10.engineer": "01a1a041-c347-73e3-a7bf-2bea8fdc604c",
+    "t11.engineer": "01a1a04c-189c-7e63-be77-79011b93dee7",
+    "t12.engineer": "01a1a059-4c06-7430-93f9-ac6ebf9314c6",
+    "t13.engineer": "01a1a074-5b63-7af3-86bc-205f0290d966",
+    "t14.engineer": "01a1a081-629a-7051-8b70-2c1fa82c62a4",
+    "t15.engineer": "01a1a08e-7243-7743-a265-c89eb14684c9",
+    "t16.engineer": "01a1a09a-dc13-7330-bddc-2dc48c641e29",
+    "t17.engineer": "01a1a09b-85d1-7263-961a-ffd922227ca0",
+    "t18.engineer": "01a1a0a5-bdae-7b71-9cc3-2524dbce405a",
+    "t19.engineer": "01a1a0ab-d00b-7570-9bb4-cb900a44817a"
+  },
+  "requestId": "27fabefa-d315-4eb1-915a-36be3dec5cc1",
+  "forManager": [],
+  "failures": [],
+  "name": "The operator requests Verus verification of lossless round trips through the actual public encode_slice/decode_slice APIs and sizing helpers, including generic input semantics, exact reported prefixes, preserved destination suffixes, and success throughout the representable capacity domain.",
+  "delivered": {
+    "verification/t1-handoff/handoff.md": [
+      "81f8cddb00fb4ee0940e536ffbec8c35"
+    ],
+    "verification/src/roundtrip_spec.rs": [
+      "f698abbe54284558b758f6cbcd5c80ea"
+    ],
+    "verification/src/roundtrip_caller.rs": [
+      "6e07d701983b4e82985c53babaae3389"
+    ],
+    "verification/t1-handoff/final-verifier.log": [
+      "c4da38072cc545e1b02192438b833434"
+    ],
+    "verification/t1-handoff/caller-check.log": [
+      "3eeb471bcc714b6a88c371d37bd99952"
+    ],
+    "verification/t1-handoff/specdet-native-corrected.log": [
+      "cf019a541f2f4fa6a46dde5e48fbfcfc"
+    ],
+    "verification/t2-handoff/handoff.md": [
+      "fc6f8fde715740cda47e6e8b00c72a4a"
+    ],
+    "verification/t2-handoff/nested-cycle.log": [
+      "b3c7aa11a11e4ad183d660e0414d9ad4"
+    ],
+    "verification/t2-handoff/hoisted-cycle.log": [
+      "37105801ff86409895c8e4345862b703"
+    ],
+    "verification/t2-handoff/minimal-cycle.rs": [
+      "93e64083e5a741b489a7757e75624617"
+    ],
+    "verification/t2-handoff/minimal-cycle.log": [
+      "f4238da8dad24815896752a5f34a691f"
+    ],
+    "t3-handoff/handoff.md": [
+      "eca44b65cb904414be194fd33c10360e"
+    ],
+    "t3-handoff/interface.log": [
+      "8151421721d14bcdba3997b55c0d42c2"
+    ],
+    "t3-handoff/minimal-forwarding-cycle.log": [
+      "aa99352f1a3648959be9b3114eebae00"
+    ],
+    "t3-handoff/extraction.log": [
+      "e67508967c9248789a51e6e4e45e9022"
+    ],
+    "t3-handoff/binding.txt": [
+      "e47f3679de8d475f95721d30df90334f"
+    ],
+    "t3-handoff/mod.rs.extraction.patch": [
+      "efeb48d7ad97439eadc76cac212b33d6"
+    ],
+    "t4-handoff/handoff.md": [
+      "f7ca04c5e5ec4d9e923c5ba0a22a602a"
+    ],
+    "t4-handoff/bridge.log": [
+      "431f39cf297b4ac9b817474bb3d5236a"
+    ],
+    "t4-handoff/binding.txt": [
+      "229cabc167454524873cd744d38dbed4"
+    ],
+    "t4-handoff/attack.log": [
+      "593a6b7764b44e23b85119a6aa66eec7"
+    ],
+    "t4-handoff/mod.rs.bridge": [
+      "a06a350084b54b0c95353c8765be806f"
+    ],
+    "t4-handoff/caller.rs.bridge": [
+      "ad9f73758ae44845bd0780bb8fa9bbbb"
+    ],
+    "t4-handoff/observation.rs": [
+      "091c31659b1e4cceb717b81543708343"
+    ],
+    "t6-handoff/handoff.md": [
+      "6c333fd735ae4e44a95fecbcc697f03c"
+    ],
+    "t6-handoff/verify.log": [
+      "7d80a1d3dca3460fa10305a86ebc7349"
+    ],
+    "t6-handoff/binding.txt": [
+      "fe6205e2c44c40cca2f705b4a229e4ee"
+    ],
+    "t6-handoff/init.rs": [
+      "1a68b991e625447f9c418c4a87f48218"
+    ],
+    "verification/t7-handoff/handoff.md": [
+      "8753b3e7f454413db8d38449b58b8666"
+    ],
+    "verification/t7-handoff/verify.log": [
+      "5eaf2004476244c28de7e015a15ea689"
+    ],
+    "verification/t7-handoff/binding.txt": [
+      "df41eaf3d36b47b1998362fd11d0a145"
+    ],
+    "verification/t7-handoff/scalar-probe.log": [
+      "1358bab7e08346ab8cf00e129bfac726"
+    ],
+    "verification/t8-handoff/handoff.md": [
+      "fe83087dca224e179687eef8299a2eab"
+    ],
+    "verification/t8-handoff/replay.py": [
+      "bea4e1d69f8d4dd99f2342ce62de8ce2"
+    ],
+    "verification/t8-handoff/replay-results.json": [
+      "b87538df6910439fba0a2be07e691c8b"
+    ],
+    "verification/t9-handoff/handoff.md": [
+      "f51206c61d5e4cbe856ef90b0debe2c4"
+    ],
+    "verification/t9-handoff/binding.txt": [
+      "c8be9f6844e94fc59fa98746a02c890b"
+    ],
+    "verification/t9-handoff/regress.log": [
+      "8957fc40766140baa06d9ffd656af26b"
+    ],
+    "verification/t9-handoff/replay-results.json": [
+      "2c798adb03a34ff5a9b50f1eb26bf460"
+    ],
+    "verification/t10-handoff/handoff.md": [
+      "2121b82654144561b73118167775ca36"
+    ],
+    "verification/t10-handoff/final.log": [
+      "74b214142b7c442c8188b043efe445c8"
+    ],
+    "verification/t10-handoff/call-graph.md": [
+      "8cf58b1aea8f4dc9a24dacfe3a059e8a"
+    ],
+    "verification/t10-handoff/replay-results.json": [
+      "dc5cef0b9de24f929c2f173799c6ced8"
+    ],
+    "verification/t11-handoff/handoff.md": [
+      "553d6846e64349978a602e7ec646072b"
+    ],
+    "verification/t11-handoff/call-graph.md": [
+      "bd317109f5934633a0bfaa6081cdd21a"
+    ],
+    "verification/t11-handoff/final-checks.txt": [
+      "6de9c93358b64de592411eb9827163c7"
+    ],
+    "verification/t12-handoff/handoff.md": [
+      "aea880f8f1b64734918725167e2d6680"
+    ],
+    "verification/t12-handoff/call-graph.md": [
+      "f9a9273e25d64ff8abbadc058197e2ef"
+    ],
+    "verification/t12-handoff/binding.txt": [
+      "4e2012bdc3504a52bbd6fe14924a25f0"
+    ],
+    "verification/t12-handoff/isolated-replay.log": [
+      "764b6a81e6604ff4bd9391931e1aa97e"
+    ],
+    "verification/t13-handoff/handoff.md": [
+      "22894e1281ec44ef8fd1d6a798f4d8b8"
+    ],
+    "verification/t13-handoff/isolated-result.md": [
+      "7d7cee786a0146288df595e6776dc720"
+    ],
+    "verification/t13-handoff/call-graph.md": [
+      "1ce6d1d8c53449f7a2500f1ddfd5bb3b"
+    ],
+    "verification/t13-handoff/binding.txt": [
+      "ecfe49106b0a45bcbd5a5a38f3d19282"
+    ],
+    "verification/t13-handoff/common.log": [
+      "d90c1b8e58d64ae98cf767b6d508bed7"
+    ],
+    "verification/t14-handoff/handoff.md": [
+      "d96320c0147d4b4f8c039717cb95037d"
+    ],
+    "verification/t14-handoff/remaining-suffix.md": [
+      "bc2567ca348c4fdd869d9186e676eaa3"
+    ],
+    "verification/t14-handoff/replay-results.json": [
+      "d0ff4a00b4fb4ad4b1a2360349ba4594"
+    ],
+    "verification/t14-handoff/call-graph.md": [
+      "f9c1f9de31d4420ba7081bde2b93ca49"
+    ],
+    "verification/t15-handoff/handoff.md": [
+      "d7f008cff82748fda8ec1afd53918b2c"
+    ],
+    "verification/t15-handoff/call-graph.md": [
+      "7c8c66b9290a403a86f90fa491dd2873"
+    ],
+    "verification/t15-handoff/isolated-verify.log": [
+      "38d4be957515463a8ac250c5105ef146"
+    ],
+    "verification/t15-handoff/isolated-binding.txt": [
+      "f7bd6023332045b59bc866cd34795840"
+    ],
+    "verification/t15-handoff/checked-body-traces.txt": [
+      "7cc4584e30034a83b68947347b4e70ce"
+    ],
+    "t17-audit-delivery/final-report.md": [
+      "4922d61aeee343c28c32f5988a8b5676"
+    ],
+    "t17-audit-delivery/handoff.md": [
+      "52038671e5254f8eb131bf4bc24db19d"
+    ],
+    "t17-audit-delivery/verify.log": [
+      "97750909fade44958f1ec1be733794a0"
+    ],
+    "t18-audit-delivery/handoff.md": [
+      "97c63e95286842669b2496eb038d75a9"
+    ],
+    "t18-audit-delivery/checks.log": [
+      "15617e4b48184fceb3d7e3f211db9301"
+    ],
+    "t18-audit-delivery/installation-handoff.md": [
+      "168dce743c2b4f8e96e3c766f139e073"
+    ],
+    "t18-audit-delivery/installation-checks.log": [
+      "efa0718d0e474f32bb0181deb14cf939"
+    ],
+    "t19-audit-delivery/handoff.md": [
+      "4cba8c38fd4a47098b2f5b986926c460"
+    ],
+    "t19-audit-delivery/acceptance.md": [
+      "8379d113a39c4ff5a134f5dc04871ab6"
+    ],
+    "t19-audit-delivery/finalization.patch": [
+      "ef0817c65241426eb691d9e537b3a783"
+    ],
+    "t19-audit-delivery/proposed-final-report.md": [
+      "f58c359c82014a89a9cc65ccc905dd92"
+    ],
+    "t19-audit-delivery/proposal-manifest.json": [
+      "0ecd2b1bf16e45bfb14faf832a3d223a"
+    ],
+    "t19-audit-delivery/proposal-checks.log": [
+      "53c3769a0ee04c7da1c655c1075021fe"
+    ],
+    "t19-audit-delivery/baseline-audit-stage.log": [
+      "9ff0ab4c767b4f9d9bc6ec5b52cefcbc"
+    ],
+    "t19-audit-delivery/install.py": [
+      "c715e1132a074819b3ca0679cada725a"
+    ],
+    "t19-audit-delivery/final-report.md": [
+      "56dab8dce59743dbb0a354564fd2caf8"
+    ],
+    "t19-audit-delivery/installation-handoff.md": [
+      "639c0f70ca944af9af750bd24573758f"
+    ],
+    "t19-audit-delivery/delivery-correction.log": [
+      "bdb6bce4a0e2409aa41783e036090728"
+    ],
+    "t19-audit-delivery/reviewer-approval.md": [
+      "4fca8e72e34e41f2af2c348a3451fdd4"
+    ],
+    "t19-audit-delivery/installation.json": [
+      "36a2d1c9b7444869a3714da4f43af5aa"
+    ],
+    "t19-audit-delivery/installed-hashes.sha256": [
+      "3931b8a7c12e465ab80e2eb4f79135d1"
+    ],
+    "t19-audit-delivery/installed-report-contract.log": [
+      "6bbb05c85bdd4279b05ce146892bf288"
+    ],
+    "t19-audit-delivery/installed-canonical-links.log": [
+      "91f3416e038947918b8ed6eacf827aef"
+    ],
+    "t19-audit-delivery/installed-audit-stage.log": [
+      "245210cd03f345479d4f1e1e00024a3b"
+    ]
+  }
+}

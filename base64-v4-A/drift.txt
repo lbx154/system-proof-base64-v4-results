@@ -1,0 +1,674 @@
+code-drift: different [correspondence; syntax only; observation incomplete]
+ERROR after src/engine/general_purpose/decode.rs: unresolved parse at 46:1
+Scope: src/alphabet.rs; src/decode.rs; src/encode.rs; src/engine/general_purpose; src/engine/mod.rs
+UNKNOWN: 1/7 selected file could not be compared.
+  src/engine/general_purpose/decode.rs: after unresolved parse at 46:1
+6/7 selected files have known projection differences; 1 unknown (observation incomplete); unified diff follows.
+--- before/src/alphabet.rs (executable projection)
++++ after/src/alphabet.rs (executable projection)
+@@ -1,24 +1,16 @@
++use vstd::prelude::*;
++use vstd::string::StringSliceAdditionalSpecFns;
+ use core::{array, convert, fmt};
+ #[cfg(any(feature = "std", test))]
+ use std::error;
+ const ALPHABET_LEN: usize = 64;
+-pub(crate) const PADDING_SYMBOL: Symbol = Symbol(b'=');
++pub const PADDING_SYMBOL: Symbol = Symbol(b'=');
+ #[derive(Clone, Eq, PartialEq)]
+ pub struct Alphabet {
+-pub(crate) symbols: [u8; ALPHABET_LEN],
+-pub(crate) padding: Symbol,
++pub symbols: [u8; ALPHABET_LEN],
++pub padding: Symbol,
+ }
+ impl Alphabet {
+-const fn from_str_unchecked(alphabet: &str, padding: Symbol) -> Self {
+-let mut symbols = [0_u8; ALPHABET_LEN];
+-let source_bytes = alphabet.as_bytes();
+-let mut index = 0;
+-while index < ALPHABET_LEN {
+-symbols[index] = source_bytes[index];
+-index += 1;
+-}
+-Self { symbols, padding }
+-}
+ pub const fn new(alphabet: &str) -> Result<Self, ParseAlphabetError> {
+ Self::new_with_padding(alphabet, PADDING_SYMBOL)
+ }
+@@ -75,8 +67,7 @@
+ )
+ }
+ }
+-#[derive(Clone, Copy, PartialEq, Eq)]
+-pub struct Symbol(u8);
++#[derive(Clone, Copy, PartialEq, Eq)] pub struct Symbol(pub u8);
+ impl Symbol {
+ pub const fn new(symbol: u8) -> Option<Self> {
+ if is_valid_b64_symbol(symbol) {
+@@ -84,9 +75,6 @@
+ } else {
+ None
+ }
+-}
+-pub const fn as_u8(&self) -> u8 {
+-self.0
+ }
+ pub fn as_char(&self) -> char {
+ char::from(self.0)
+@@ -130,10 +118,13 @@
+ }
+ #[cfg(any(feature = "std", test))]
+ impl error::Error for ParseAlphabetError {}
+-pub const STANDARD: Alphabet = Alphabet::from_str_unchecked(
++pub spec const STANDARD_SPEC: Alphabet = Alphabet::spec_from_str("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", PADDING_SYMBOL);
++pub exec const STANDARD: Alphabet {
++Alphabet::from_str_unchecked(
+ "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
+ PADDING_SYMBOL,
+-);
++)
++}
+ pub const URL_SAFE: Alphabet = Alphabet::from_str_unchecked(
+ "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
+ PADDING_SYMBOL,
+@@ -154,3 +145,20 @@
+ "!\"#$%&'()*+,-012345689@ABCDEFGHIJKLMNPQRSTUVXYZ[`abcdefhijklmpqr",
+ PADDING_SYMBOL,
+ );
++impl Alphabet {
++const fn from_str_unchecked(alphabet: &str, padding: Symbol) -> Self {
++let mut symbols = [0_u8; ALPHABET_LEN];
++let source_bytes = alphabet.as_bytes();
++let mut index = 0;
++while index < ALPHABET_LEN
++{
++symbols[index] = source_bytes[index];
++index += 1;
++}
++Self { symbols, padding }
++}
++}
++impl Symbol { pub const fn as_u8(&self) -> u8 {
++self.0
++}
++}
+
+--- before/src/decode.rs (executable projection)
++++ after/src/decode.rs (executable projection)
+@@ -1,3 +1,5 @@
++use crate::engine::CodecCaps;
++use vstd::prelude::*;
+ use crate::engine::{general_purpose::STANDARD, DecodeEstimate, Engine};
+ #[cfg(any(feature = "alloc", test))]
+ use alloc::vec::Vec;
+@@ -108,8 +110,10 @@
+ engine.decode_slice(input, output)
+ }
+ #[must_use]
+-pub fn decoded_len_estimate(encoded_len: usize) -> usize {
++verus! {
++pub fn decoded_len_estimate(encoded_len: usize) -> (r: usize) ensures r == crate::roundtrip_spec::decode_capacity(encoded_len as int) {
+ STANDARD
+ .internal_decoded_len_estimate(encoded_len)
+ .decoded_len_estimate()
+ }
++}
+
+--- before/src/encode.rs (executable projection)
++++ after/src/encode.rs (executable projection)
+@@ -1,3 +1,4 @@
++use vstd::prelude::*;
+ use crate::alphabet::Symbol;
+ #[cfg(any(feature = "alloc", test))]
+ use crate::engine::general_purpose::STANDARD;
+@@ -38,13 +39,14 @@
+ ) -> Result<usize, EncodeSliceError> {
+ engine.encode_slice(input, output_buf)
+ }
+-pub(crate) fn encode_with_padding<E: Engine + ?Sized>(
++pub(crate) fn encode_with_padding<E: crate::engine::CodecCaps + ?Sized>(
+ input: &[u8],
+ output: &mut [u8],
+ engine: &E,
+ expected_encoded_size: usize,
+-) {
+-debug_assert_eq!(expected_encoded_size, output.len());
++)
++{
++debug_assert!(expected_encoded_size == output.len());
+ let b64_bytes_written = engine.internal_encode(input, output);
+ let padding_bytes = if engine.config().encode_padding() {
+ add_padding(
+@@ -58,10 +60,11 @@
+ let encoded_bytes = b64_bytes_written
+ .checked_add(padding_bytes)
+ .expect("usize overflow when calculating b64 length");
+-debug_assert_eq!(expected_encoded_size, encoded_bytes);
++debug_assert!(expected_encoded_size == encoded_bytes);
+ }
+ #[must_use]
+-pub const fn encoded_len(bytes_len: usize, padding: bool) -> Option<usize> {
++pub const fn encoded_len(bytes_len: usize, padding: bool) -> Option<usize>
++{
+ let rem = bytes_len % 3;
+ let complete_input_chunks = bytes_len / 3;
+ let complete_chunk_output =
+@@ -84,10 +87,12 @@
+ Some(complete_chunk_output)
+ }
+ }
+-pub(crate) fn add_padding(unpadded_output_len: usize, padding: Symbol, output: &mut [u8]) -> usize {
++pub(crate) fn add_padding(unpadded_output_len: usize, padding: Symbol, output: &mut [u8]) -> usize
++{
+ let pad_bytes = (4 - (unpadded_output_len % 4)) % 4;
+ #[allow(clippy::needless_range_loop)]
+-for i in 0..pad_bytes {
++for i in 0..pad_bytes
++{
+ output[i] = padding.as_u8();
+ }
+ pad_bytes
+
+--- before/src/engine/general_purpose/decode_suffix.rs (executable projection)
++++ after/src/engine/general_purpose/decode_suffix.rs (executable projection)
+@@ -1,9 +1,14 @@
++use vstd::prelude::*;
++use vstd::std_specs::iter::IteratorSpec;
++use crate::t15_suffix::{base,count,val,byte,word};
+ use crate::alphabet::Symbol;
+ use crate::{
+ engine::{general_purpose::INVALID_VALUE, DecodeMetadata, DecodePaddingMode},
+ DecodeError, DecodeSliceError,
+ };
+ #[allow(clippy::too_many_arguments)]
++verus! {
++broadcast use {vstd::std_specs::iter::enumerate_postcondition, vstd::seq::group_seq_lemmas, vstd::slice::group_slice_axioms};
+ pub(crate) fn decode_suffix(
+ input: &[u8],
+ input_index: usize,
+@@ -13,7 +18,27 @@
+ decode_allow_trailing_bits: bool,
+ padding: Symbol,
+ padding_mode: DecodePaddingMode,
+-) -> Result<DecodeMetadata, DecodeSliceError> {
++) -> (r:Result<DecodeMetadata, DecodeSliceError>)
++requires crate::engine::decodable(input@,old(output)@),
++input_index == super::decode::quad_end(input@.len() as int), output_index == input_index / 4 * 3,
++super::decode::selected(decode_table@,padding,decode_allow_trailing_bits,padding_mode),
++forall|original:Seq<u8>| crate::roundtrip_spec::decode_pre(original,input@,old(output)@) ==> old(output)@.take(output_index as int) == original.take(output_index as int),
++ensures super::decode::all_done(input@,old(output)@,final(output)@,match r { Ok(dm) => Some(dm.length()), Err(_) => None }),
++r.is_ok(), forall|original:Seq<u8>| crate::roundtrip_spec::decode_pre(original,input@,old(output)@) ==>
++crate::roundtrip_spec::decode_guarantee(original,input@,old(output)@,final(output)@,match r { Ok(dm) => Some(dm.length()), Err(_) => None }),
++{
++hide(crate::roundtrip_spec::encoded_at);
++hide(crate::roundtrip_spec::alphabet);
++let ghost before = output@;
++let ghost supplied=input@;
++let ghost o = choose|o:Seq<u8>| crate::roundtrip_spec::decode_pre(o,input@,before);
++proof { crate::t15_suffix::terminal(o,input@,decode_table@); }
++let ghost b0=base(o);
++let ghost n=o.len()-b0;
++let ghost symbols=count(n);
++let ghost start=output_index as int;
++assert(start==b0);
++assert(0<=input_index<=input.len());
+ debug_assert!((input.len() - input_index) <= 4);
+ let mut morsels_in_leftover = 0;
+ let mut padding_bytes_count = 0;
+@@ -21,7 +46,46 @@
+ let mut last_symbol = 0_u8;
+ let mut last_symbol_value = 0_u8;
+ let mut morsels = [0_u8; 4];
+-for (leftover_index, &b) in input[input_index..].iter().enumerate() {
++let ghost original_index=output_index;
++let it = input[input_index..].iter().enumerate();
++let ghost initial=it.remaining();
++assert(it.obeys_prophetic_iter_laws());
++assert(initial.len()==input.len()-input_index);
++assert forall|j:int| 0<=j<initial.len() implies #[trigger] initial[j]==(j as usize, &supplied[input_index+j]) by {}
++for (leftover_index, &b) in walk: it
++invariant
++walk.iter.obeys_prophetic_iter_laws(), walk.seq()==initial,
++input@==supplied, input@.len()<=usize::MAX, 0<=input_index<=input.len(),
++0<=b0<=o.len(), b0%3==0,
++initial.len()==input.len()-input_index,
++forall|j:int| 0<=j<initial.len() ==> #[trigger] initial[j]==(j as usize, &supplied[input_index+j]),
++input@==crate::roundtrip_spec::encoded(o),
++input_index==b0/3*4, b0==base(o), start==b0, n==o.len()-b0, symbols==count(n),
++0<=n<=3, (n==0 ==> input.len()==0), (n>0 ==> initial.len()==4),
++0<=symbols<=4, symbols*6/8==n,
++super::decode::selected(decode_table@,padding,decode_allow_trailing_bits,padding_mode),
++forall|k:int| 0<=k<symbols ==> #[trigger] val(o,b0,k)<64 && input@[input_index+k]!=61u8
++&& decode_table@[input@[input_index+k] as int]==val(o,b0,k),
++forall|k:int| symbols<=k<4 ==> #[trigger] val(o,b0,k)==0u8 && (n>0 ==> input@[input_index+k]==61u8),
++morsels_in_leftover==if walk.index()<symbols {walk.index()} else {symbols},
++padding_bytes_count==if walk.index()<symbols {0int} else {walk.index()-symbols},
++padding_bytes_count>0 ==> first_padding_offset==symbols,
++morsels_in_leftover>0 ==> last_symbol==input@[input_index+morsels_in_leftover-1]
++&& last_symbol_value==val(o,b0,morsels_in_leftover-1),
++forall|k:int| 0<=k<4 ==> #[trigger] morsels@[k]==if k<morsels_in_leftover {val(o,b0,k)} else {0u8},
++output@==before, output_index==original_index, original_index==start,
++crate::roundtrip_spec::decode_pre(o,input@,before),
++before.take(start)==o.take(start),
++decreases input.len()-input_index-walk.index(),
++{
++assert(leftover_index==walk.index());
++assert(b==input@[input_index+leftover_index]);
++proof { if leftover_index<symbols {
++assert(val(o,b0,leftover_index as int)<64);
++assert(b!=61u8);
++assert(decode_table@[b as int]==val(o,b0,leftover_index as int));
++} else {assert(b==61u8);} }
++assert((b==61u8)==(leftover_index>=symbols));
+ if b == padding.as_u8() {
+ if leftover_index < 2 {
+ debug_assert!(
+@@ -52,6 +116,9 @@
+ morsels[morsels_in_leftover] = morsel;
+ morsels_in_leftover += 1;
+ }
++assert(morsels_in_leftover==symbols);
++assert(padding_bytes_count+symbols==initial.len());
++assert forall|k:int| 0<=k<4 implies #[trigger] morsels@[k]==val(o,b0,k) by {}
+ if !input.is_empty() && morsels_in_leftover < 2 {
+ return Err(DecodeError::InvalidLength(input_index + morsels_in_leftover).into());
+ }
+@@ -73,6 +140,9 @@
+ | (u32::from(morsels[1]) << 20)
+ | (u32::from(morsels[2]) << 14)
+ | (u32::from(morsels[3]) << 8);
++proof { crate::t15_suffix::assemble(byte(o,b0,0),byte(o,b0,1),byte(o,b0,2)); }
++assert(leftover_num==word(o,b0));
++proof { crate::t15_suffix::trailing(byte(o,b0,0),byte(o,b0,1),byte(o,b0,2),n as u32); }
+ let mask = !0_u32 >> (leftover_bytes_to_append * 8);
+ if !decode_allow_trailing_bits && (leftover_num & mask) != 0 {
+ return Err(DecodeError::InvalidLastSymbol {
+@@ -82,13 +152,43 @@
+ }
+ .into());
+ }
+-for _ in 0..leftover_bytes_to_append {
++assert(before.take(start)==o.take(start));
++assert forall|k:int| 0<=k<start implies before[k]==o[k] by {assert(before.take(start)[k]==before[k]);}
++proof { crate::t15_suffix::shifts(byte(o,b0,0),byte(o,b0,1),byte(o,b0,2),0); }
++let ghost packed=leftover_num;
++for _ in writes: 0..leftover_bytes_to_append
++invariant
++0<=writes.index()<=n<=3,
++leftover_bytes_to_append==n,
++output_index==start+writes.index(), start==b0, b0==base(o), n==o.len()-b0,
++leftover_num==packed << (8*writes.index()) as u32,
++packed==word(o,b0),
++super::decode::selected(decode_table@,padding,decode_allow_trailing_bits,padding_mode),
++output@.len()==before.len(),
++forall|k:int| 0<=k<output_index ==> #[trigger] output@[k]==o[k],
++forall|k:int| output_index<=k<output@.len() ==> #[trigger] output@[k]==before[k],
++crate::roundtrip_spec::decode_pre(o,input@,before),
++before.take(start)==o.take(start),
++decreases leftover_bytes_to_append-writes.index(),
++{
++proof { crate::t15_suffix::shifts(byte(o,b0,0),byte(o,b0,1),byte(o,b0,2),writes.index() as u32); }
++assert(byte(o,b0,writes.index())==o[output_index as int]);
+ let hi_byte = (leftover_num >> 24) as u8;
+ leftover_num <<= 8;
+ *output
+ .get_mut(output_index)
+ .ok_or(DecodeSliceError::OutputSliceTooSmall)? = hi_byte;
+ output_index += 1;
++}
++assert(output_index==o.len());
++assert(output@.take(o.len() as int) =~= o);
++assert(output@.skip(o.len() as int) =~= before.skip(o.len() as int));
++assert(crate::roundtrip_spec::writes(before,output@,o));
++proof {
++assert forall|original:Seq<u8>| crate::roundtrip_spec::decode_pre(original,input@,before) implies
++crate::roundtrip_spec::decode_guarantee(original,input@,before,output@,Some(output_index)) by {
++crate::t15_suffix::unique(input@,o,original,decode_table@);
++}
+ }
+ Ok(DecodeMetadata::new(
+ output_index,
+@@ -99,3 +199,4 @@
+ },
+ ))
+ }
++}
+
+--- before/src/engine/general_purpose/mod.rs (executable projection)
++++ after/src/engine/general_purpose/mod.rs (executable projection)
+@@ -1,3 +1,4 @@
++use vstd::prelude::*;
+ use crate::alphabet::Symbol;
+ use crate::{
+ alphabet,
+@@ -49,11 +50,12 @@
+ &self.decode_table
+ }
+ }
+-impl super::Engine for GeneralPurpose {
++impl super::CodecCaps for GeneralPurpose {
+ type Config = GeneralPurposeConfig;
+ type DecodeEstimate = GeneralPurposeEstimate;
+ fn internal_encode(&self, input: &[u8], output: &mut [u8]) -> usize {
+-encode_helper(&self.encode_table, input, output, |_, _| (0, 0))
++encode_helper(&self.encode_table, input, output, |a: &[u8], b: &mut [u8]| -> (usize,usize)
++{ (0, 0) })
+ }
+ fn internal_decoded_len_estimate(&self, input_len: usize) -> Self::DecodeEstimate {
+ GeneralPurposeEstimate::new(input_len)
+@@ -72,7 +74,8 @@
+ self.config.decode_allow_trailing_bits,
+ self.padding,
+ self.config.decode_padding_mode,
+-|_, _, _| (0, 0),
++|a: &[u8], n: usize, b: &mut [u8]| -> (usize,usize)
++{ (0, 0) },
+ )
+ }
+ fn config(&self) -> &Self::Config {
+@@ -83,12 +86,20 @@
+ }
+ }
+ #[inline]
++verus! {
+ pub(crate) fn encode_helper(
+ encode_table: &[u8; 64],
+ input: &[u8],
+ output: &mut [u8],
+ simd_prefix: impl FnOnce(&[u8], &mut [u8]) -> (usize, usize),
+-) -> usize {
++) -> (r:usize)
++requires crate::roundtrip_spec::encode_pre(input@, old(output)@),
++forall|i:int| 0 <= i < 64 ==> encode_table@[i] == crate::roundtrip_spec::alphabet(i),
++forall|a:&[u8], b:&mut [u8]| simd_prefix.requires((a,b)),
++forall|a:&[u8], b:&mut [u8], x:(usize,usize)| simd_prefix.ensures((a,b),x) ==> x == (0usize,0usize) && final(b)@ == b@,
++ensures r == crate::encode::unpadded_len(input@.len() as int),
++crate::roundtrip_spec::writes(old(output)@, final(output)@, crate::encode::unpadded(input@)),
++{
+ let (input_index, output_index) = simd_prefix(input, output);
+ debug_assert!(
+ input_index % 3 == 0,
+@@ -102,18 +113,25 @@
+ debug_assert!(output_index <= output.len());
+ encode_scalar_tail(encode_table, input, output, input_index, output_index)
+ }
++}
+ fn encode_scalar_tail(
+ encode_table: &[u8; 64],
+ input: &[u8],
+ output: &mut [u8],
+ mut input_index: usize,
+ mut output_index: usize,
+-) -> usize {
++) -> usize
++{
++hide(crate::roundtrip_spec::encoded_at);
++hide(crate::roundtrip_spec::alphabet);
++hide(crate::encode::unpadded);
++hide(crate::roundtrip_spec::encoded);
+ const BLOCKS_PER_FAST_LOOP: usize = 4;
+ const LOW_SIX_BITS: u64 = 0x3F;
+ let last_fast_index = input.len().saturating_sub(BLOCKS_PER_FAST_LOOP * 6 + 2);
+ if last_fast_index > 0 {
+-while input_index <= last_fast_index {
++while input_index <= last_fast_index
++{
+ let input_chunk = &input[input_index..(input_index + (BLOCKS_PER_FAST_LOOP * 6 + 2))];
+ let output_chunk = &mut output[output_index..(output_index + BLOCKS_PER_FAST_LOOP * 8)];
+ let input_u64 = read_u64(&input_chunk[0..]);
+@@ -159,7 +177,8 @@
+ const LOW_SIX_BITS_U8: u8 = 0x3F;
+ let rem = input.len() % 3;
+ let start_of_rem = input.len() - rem;
+-while input_index < start_of_rem {
++while input_index < start_of_rem
++{
+ let input_chunk = &input[input_index..(input_index + 3)];
+ let output_chunk = &mut output[output_index..(output_index + 4)];
+ output_chunk[0] = encode_table[(input_chunk[0] >> 2) as usize];
+@@ -187,29 +206,37 @@
+ }
+ output_index
+ }
+-pub(crate) const fn encode_table(alphabet: &Alphabet) -> [u8; 64] {
++pub(crate) const fn encode_table(alphabet: &Alphabet) -> [u8;64] {
+ let mut encode_table = [0_u8; 64];
+ {
+ let mut index = 0;
+-while index < 64 {
++while index < 64
++{
+ encode_table[index] = alphabet.symbols[index];
+ index += 1;
+ }
+ }
+ encode_table
+ }
+-pub(crate) const fn decode_table(alphabet: &Alphabet) -> [u8; 256] {
++pub(crate) const fn decode_table(alphabet: &Alphabet) -> [u8;256] {
+ let mut decode_table = [INVALID_VALUE; 256];
+ let mut index = 0_usize;
+-while index < 64 {
++while index < 64
++{
+ decode_table[alphabet.symbols[index] as usize] = index as u8;
+ index += 1;
+ }
+ decode_table
+ }
+ #[inline]
+-fn read_u64(s: &[u8]) -> u64 {
++verus! {
++broadcast use vstd::std_specs::convert::slice_array_result_contract;
++fn read_u64(s: &[u8]) -> (r:u64)
++requires s@.len() >= 8,
++ensures r == crate::t8_primitives::be8(s@.take(8)),
++{
+ u64::from_be_bytes(s[..8].try_into().unwrap())
++}
+ }
+ #[derive(Clone, Copy, Debug)]
+ pub struct GeneralPurposeConfig {
+@@ -273,7 +300,7 @@
+ self.decode_padding_mode
+ }
+ }
+-pub const STANDARD: GeneralPurpose = GeneralPurpose::new(&alphabet::STANDARD, PAD);
++pub spec const STANDARD_SPEC: GeneralPurpose = GeneralPurpose::spec_new(&alphabet::STANDARD, PAD_SPEC); pub exec const STANDARD: GeneralPurpose { GeneralPurpose::new(&alphabet::STANDARD, PAD) }
+ pub const STANDARD_PAD_INDIFFERENT: GeneralPurpose =
+ GeneralPurpose::new(&alphabet::STANDARD, PAD_INDIFFERENT);
+ pub const STANDARD_NO_PAD: GeneralPurpose = GeneralPurpose::new(&alphabet::STANDARD, NO_PAD);
+@@ -285,7 +312,7 @@
+ pub const URL_SAFE_NO_PAD: GeneralPurpose = GeneralPurpose::new(&alphabet::URL_SAFE, NO_PAD);
+ pub const URL_SAFE_NO_PAD_INDIFFERENT: GeneralPurpose =
+ GeneralPurpose::new(&alphabet::URL_SAFE, NO_PAD_INDIFFERENT);
+-pub const PAD: GeneralPurposeConfig = GeneralPurposeConfig::new();
++pub spec const PAD_SPEC: GeneralPurposeConfig = GeneralPurposeConfig::spec_new(); pub exec const PAD: GeneralPurposeConfig { GeneralPurposeConfig::new() }
+ pub const PAD_INDIFFERENT: GeneralPurposeConfig = GeneralPurposeConfig::new()
+ .with_encode_padding(true)
+ .with_decode_padding_mode(DecodePaddingMode::Indifferent);
+@@ -295,3 +322,8 @@
+ pub const NO_PAD_INDIFFERENT: GeneralPurposeConfig = GeneralPurposeConfig::new()
+ .with_encode_padding(false)
+ .with_decode_padding_mode(DecodePaddingMode::Indifferent);
++impl super::Engine for GeneralPurpose {}
++use vstd::string::StringSliceAdditionalSpecFns;
++use crate::engine::CodecCaps;
++impl GeneralPurpose {
++}
+
+--- before/src/engine/mod.rs (executable projection)
++++ after/src/engine/mod.rs (executable projection)
+@@ -1,3 +1,5 @@
++use vstd::prelude::*;
++use crate::roundtrip_spec::*;
+ use crate::alphabet::Symbol;
+ #[cfg(any(feature = "alloc", test))]
+ use crate::chunked_encoder;
+@@ -36,21 +38,27 @@
+ target_feature = "neon"
+ ))]
+ pub use simd::Neon;
+-pub trait Engine: Send + Sync {
++pub trait CodecCaps: Send + Sync {
+ type Config: Config;
+ type DecodeEstimate: DecodeEstimate;
+ #[doc(hidden)]
+-fn internal_encode(&self, input: &[u8], output: &mut [u8]) -> usize;
++fn internal_encode(&self, input: &[u8], output: &mut [u8]) -> usize
++;
+ #[doc(hidden)]
+-fn internal_decoded_len_estimate(&self, input_len: usize) -> Self::DecodeEstimate;
++fn internal_decoded_len_estimate(&self, input_len: usize) -> Self::DecodeEstimate ;
+ #[doc(hidden)]
+ fn internal_decode(
+ &self,
+ input: &[u8],
+ output: &mut [u8],
+ decode_estimate: Self::DecodeEstimate,
+-) -> Result<DecodeMetadata, DecodeSliceError>;
+-fn config(&self) -> &Self::Config;
++) -> Result<DecodeMetadata, DecodeSliceError>
++;
++fn config(&self) -> &Self::Config
++;
++fn padding(&self) -> Symbol ;
++}
++pub trait Engine: CodecCaps {
+ #[cfg(any(feature = "alloc", test))]
+ #[inline]
+ fn encode<T: AsRef<[u8]>>(&self, input: T) -> String {
+@@ -87,25 +95,9 @@
+ &self,
+ input: T,
+ output_buf: &mut [u8],
+-) -> Result<usize, EncodeSliceError> {
+-fn inner<E>(
+-engine: &E,
+-input_bytes: &[u8],
+-output_buf: &mut [u8],
+ ) -> Result<usize, EncodeSliceError>
+-where
+-E: Engine + ?Sized,
+ {
+-let encoded_size = encoded_len(input_bytes.len(), engine.config().encode_padding())
+-.expect("usize overflow when calculating buffer size");
+-if output_buf.len() < encoded_size {
+-return Err(EncodeSliceError::OutputSliceTooSmall);
+-}
+-let b64_output = &mut output_buf[0..encoded_size];
+-encode_with_padding(input_bytes, b64_output, engine, encoded_size);
+-Ok(encoded_size)
+-}
+-inner(self, input.as_ref(), output_buf)
++encode_slice_inner(self, input.as_ref(), output_buf)
+ }
+ #[cfg(any(feature = "alloc", test))]
+ #[inline]
+@@ -168,24 +160,9 @@
+ &self,
+ input: T,
+ output: &mut [u8],
+-) -> Result<usize, DecodeSliceError> {
+-fn inner<E>(
+-engine: &E,
+-input_bytes: &[u8],
+-output: &mut [u8],
+ ) -> Result<usize, DecodeSliceError>
+-where
+-E: Engine + ?Sized,
+ {
+-engine
+-.internal_decode(
+-input_bytes,
+-output,
+-engine.internal_decoded_len_estimate(input_bytes.len()),
+-)
+-.map(|dm| dm.decoded_len)
+-}
+-inner(self, input.as_ref(), output)
++decode_slice_inner(self, input.as_ref(), output)
+ }
+ #[inline]
+ fn decode_slice_unchecked<T: AsRef<[u8]>>(
+@@ -213,13 +190,12 @@
+ }
+ inner(self, input.as_ref(), output)
+ }
+-fn padding(&self) -> Symbol;
+ }
+ pub trait Config {
+-fn encode_padding(&self) -> bool;
++fn encode_padding(&self) -> bool ;
+ }
+ pub trait DecodeEstimate {
+-fn decoded_len_estimate(&self) -> usize;
++fn decoded_len_estimate(&self) -> usize ;
+ }
+ #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+ pub enum DecodePaddingMode {
+@@ -227,16 +203,54 @@
+ RequireCanonical,
+ RequireNone,
+ }
+-#[derive(PartialEq, Eq, Debug)]
+ pub struct DecodeMetadata {
+ pub(crate) decoded_len: usize,
+ pub(crate) padding_offset: Option<usize>,
+ }
+ impl DecodeMetadata {
+-pub(crate) fn new(decoded_bytes: usize, padding_index: Option<usize>) -> Self {
++pub(crate) fn new(decoded_bytes: usize, padding_index: Option<usize>) -> Self
++{
++reveal(DecodeMetadata::length);
+ Self {
+ decoded_len: decoded_bytes,
+ padding_offset: padding_index,
+ }
+ }
+ }
++fn encode_slice_inner<E>(
++engine: &E,
++input_bytes: &[u8],
++output_buf: &mut [u8],
++) -> Result<usize, EncodeSliceError>
++where
++E: CodecCaps + ?Sized,
++{
++let encoded_size = encoded_len(input_bytes.len(), engine.config().encode_padding())
++.expect("usize overflow when calculating buffer size");
++if output_buf.len() < encoded_size {
++return Err(EncodeSliceError::OutputSliceTooSmall);
++}
++let b64_output = &mut output_buf[0..encoded_size];
++encode_with_padding(input_bytes, b64_output, engine, encoded_size);
++Ok(encoded_size)
++}
++fn decode_slice_inner<E>(
++engine: &E,
++input_bytes: &[u8],
++output: &mut [u8],
++) -> Result<usize, DecodeSliceError>
++where
++E: CodecCaps + ?Sized,
++{
++engine
++.internal_decode(
++input_bytes,
++output,
++engine.internal_decoded_len_estimate(input_bytes.len()),
++)
++.map(|dm: DecodeMetadata| -> usize { dm.decoded_len })
++}
++pub trait ExAsRef<T: core::marker::PointeeSized>: core::marker::PointeeSized {
++type ExternalTraitSpecificationFor: core::convert::AsRef<T>;
++fn as_ref(&self) -> &T ;
++}
+Coverage limits (not proof obligations):
+  unevaluated cfg: 64 occurrences / 5 files; e.g. before src/alphabet.rs:4:1; after src/alphabet.rs:6:1.
+  unexpanded macros: 60 occurrences / 7 files; e.g. after src/alphabet.rs:148:9; before src/alphabet.rs:157:9.
+  verification membership not established: 114 occurrences / 7 files; e.g. before src/alphabet.rs:64:5; after src/alphabet.rs:75:5.
+Explicit source scope only; project-external dependencies were not scanned.
+Macros/configuration are not resolved; matching syntax is not semantic equivalence.
+No verification or semantic judgment. --json: structured summary; --details: complete observations.

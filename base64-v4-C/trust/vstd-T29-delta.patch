@@ -1,0 +1,31 @@
+--- a/source/vstd/std_specs/convert.rs
++++ b/source/vstd/std_specs/convert.rs
+@@ -115,6 +115,28 @@
+         call_ensures(U::into, (a,), ret.unwrap()),
+ ;
+ 
++// T29 source-supported std slice-to-eight-byte-array model.
++#[verifier::external_type_specification]
++#[verifier::external_body]
++pub struct ExTryFromSliceError(core::array::TryFromSliceError);
++#[verifier::external_fn_specification]
++pub fn ex_array_try_from<'unused, T: Copy, const N: usize>(s: &[T])
++    -> (r: Result<[T; N], core::array::TryFromSliceError>)
++    ensures r.is_ok() == (s.len() == N), r.is_ok() ==> r.unwrap()@ == s@
++{ <[T; N] as core::convert::TryFrom<&[T]>>::try_from(s) }
++pub uninterp spec fn spec_array_try_from<T: Copy, const N: usize>(s: &[T])
++    -> Result<[T; N], core::array::TryFromSliceError>;
++pub broadcast axiom fn axiom_array_try_from<T: Copy, const N: usize>(s: &[T])
++    ensures
++        (#[trigger] spec_array_try_from::<T, N>(s)).is_ok() == (s.len() == N),
++        spec_array_try_from::<T, N>(s).is_ok() ==> spec_array_try_from::<T, N>(s).unwrap()@ == s@,
++;
++impl<'a, T: Copy, const N: usize> TryFromSpecImpl<&'a [T]> for [T; N] {
++    open spec fn obeys_try_from_spec() -> bool { true }
++    open spec fn try_from_spec(s: &'a [T]) -> Result<Self, core::array::TryFromSliceError> {
++        spec_array_try_from::<T, N>(s)
++    }
++}
+ } // verus!
+ macro_rules! impl_from_spec {
+     ($from: ty => [$($to: ty)*]) => {

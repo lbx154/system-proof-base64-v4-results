@@ -1,0 +1,47 @@
+Short goal:
+Preserve arbitrary input bytes through the production Base64 encode_slice and decode_slice round trip, including exact reported prefixes, destination suffixes, generic input semantics, and the actual public callers.
+
+Complete developer input (authoritative):
+# Task: keep data unchanged through Base64 encoding and decoding
+
+Use Verus to prove the properties below.
+
+## What I need
+
+I use this library to store or transmit binary data as text and recover the original data later. I want to verify that the real encoding and decoding APIs work together without losing, changing, duplicating or reordering bytes. This task is about lossless round-trip behavior, not a complete standards-compliance audit.
+
+Use the registered production checkout at the fixed revision supplied with this task. The system-proof runtime provides that authoritative production checkout and a separate verification checkout of the same source. Treat every source path below as relative to the registered repository root; do not assume that either checkout is named `code/`. Read production to establish original behavior, make proof and verification adaptations in verification, and keep any authorized production fix and all production/verification drift explicit. Use the `GeneralPurpose` engine with `general_purpose::STANDARD`, disable default features, and enable only `std`: `--no-default-features --features std`. Do not use SIMD engines for this task.
+
+## Top-level scope
+
+| Entry point | What I use it for |
+| --- | --- |
+| `Engine::encode_slice` | Encode my input into a caller-provided buffer and report how many bytes were written |
+| `Engine::decode_slice` | Decode exactly that reported encoded prefix into another caller-provided buffer |
+| `encoded_len` and `decoded_len_estimate` | Size those buffers before making the two calls |
+
+The public API is in `src/engine/mod.rs`. The selected implementation is in `src/engine/general_purpose/`; length/padding support and tables are in `src/encode.rs`, `src/decode.rs` and `src/alphabet.rs`. These supporting functions matter insofar as the real public calls depend on them; choose the internal breakdown yourself.
+
+## Behavior I expect
+
+1. For every input byte sequence within the supported length range, with buffers sized sufficiently using the public sizing helpers, encoding and subsequent decoding both succeed. The decoded length and every decoded byte equal the original input.
+2. The caller passes only the encoded prefix reported by `encode_slice`, not unused capacity after it. Existing bytes in the output buffers must not influence the result.
+3. Empty data, zero bytes, non-UTF-8 data and lengths on either side of the implementation's processing-block boundaries are all normal inputs. Do not limit the task to text strings or a few example lengths.
+4. Input data is not modified. On success, bytes beyond the reported written prefix in each destination buffer remain unchanged.
+5. State clearly which input lengths the platform and sizing helpers can represent. Within that range and the stated capacity conditions, reporting an error instead of recovering the data is not an acceptable substitute for success.
+
+## When failure is permitted
+
+No encoding or decoding error is permitted within the round-trip use described above: supported input length, sufficient caller-provided buffers, and decoding exactly the encoder's reported output. An error from an internal helper is not an additional permitted failure reason, and a panic is not a substitute for the required result.
+
+Justify the supported length range from representation and capacity limits, not by defining it as whichever inputs the implementation accepts. Establish that the sizing helpers provide enough space in that range; do not assume their correctness to excuse a short output or a rejected encoding. Arbitrary external encoded strings, insufficient buffers and unrepresentable lengths remain outside this task, not exceptions that may be applied to supported calls.
+
+## What is not part of this request
+
+I am not asking for interoperability with another Base64 implementation, all RFC rules, arbitrary malformed-string behavior, exact error messages/offsets, insufficient-output behavior, streaming readers/writers, other alphabets/configurations, allocation internals or timing guarantees.
+
+The decoder must work on every encoded string that this selected encoder produces for the inputs above. This does not require a promise about every other string the decoder could receive.
+
+## What to return
+
+Tell me which requested behaviors you established for these actual APIs, including the absence of unjustified errors in the supported round-trip, any counterexample or bug, the code and configuration covered, and remaining limitations or environmental assumptions. Keep the original revision identifiable. If code changes are needed, separate findings about the original from the changed version; do not replace the codec with another algorithm and report that as verification of this source.
