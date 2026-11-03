@@ -1,5 +1,7 @@
 # base64-v4 审阅包：A 组与 C 组
 
+> 网页版（全部材料全文、可折叠）：https://lbx154.github.io/system-proof-base64-v4-results/
+
 任务：system-proof-benchmarks 的 `base64-v4`。目标是证明 base64 crate 用 STANDARD 引擎时，`encode_slice` 再 `decode_slice` 能对任意字节原样往返。生产代码的版本固定为 `47fa113a5c309fd7dcf5618d0f738cc9056d4402`。
 
 两组用的都是 TypeScript 版 Argus（[lbx154/Argus](https://github.com/lbx154/Argus)）加 `system_proof` 技能包。技能包不在本仓库，这里只放两组的成果。后端是 codex，模型是 gpt-6.1-sol。
