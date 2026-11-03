@@ -1,0 +1,32 @@
+--- a/source/rust_verify/src/rust_to_vir_func.rs
++++ b/source/rust_verify/src/rust_to_vir_func.rs
+@@ -20,7 +20,7 @@
+ use rustc_middle::ty::{
+     AdtDef, AliasTyKind, BoundRegion, BoundRegionKind, BoundVar, Clause, ClauseKind, ConstKind,
+     GenericArg, GenericArgKind, GenericArgsRef, IsRigid, Region, RegionKind, TyCtxt, TyKind,
+-    TypingEnv, ValTreeKind, Value,
++    TypeVisitableExt, TypingEnv, ValTreeKind, Value,
+ };
+ use rustc_mir_build_verus::verus::BodyErasure;
+ use rustc_span::Span;
+@@ -778,7 +778,19 @@
+                 rustc_middle::ty::TyKind::Array(ty1, const1),
+                 rustc_middle::ty::TyKind::Array(ty2, const2),
+             ) => {
+-                const1 == const2
++                // t9: retain structural equality for symbolic lengths. For closed
++                // constants, require successful rustc evaluation of BOTH sides.
++                (const1 == const2 || (!const1.has_non_region_param()
++                    && !const2.has_non_region_param()
++                    && !const1.has_infer() && !const2.has_infer()
++                    && !const1.has_escaping_bound_vars() && !const2.has_escaping_bound_vars()
++                    && match (
++                    tcx.try_normalize_erasing_regions(TypingEnv::fully_monomorphized(), rustc_middle::ty::Unnormalized::new_wip(*const1)).ok().and_then(|c| c.try_to_target_usize(tcx)),
++                    tcx.try_normalize_erasing_regions(TypingEnv::fully_monomorphized(), rustc_middle::ty::Unnormalized::new_wip(*const2)).ok().and_then(|c| c.try_to_target_usize(tcx)),
++                ) {
++                    (Some(n1), Some(n2)) => n1 == n2,
++                    _ => false,
++                }))
+                     && compare_external_ty(tcx, verus_items, &ty1, &ty2, external_trait_from_to)
+             }
+             (

@@ -1,0 +1,19 @@
+--- a/source/vir/src/sst_to_air.rs
++++ b/source/vir/src/sst_to_air.rs
+@@ -2424,11 +2424,11 @@
+             let is_air_break = *is_break && !loop_info.loop_isolation;
+             if !ctx.checking_spec_preconditions() && !is_air_break {
+                 assert!(!is_break || !loop_info.some_cond); // AST-to-SST conversion must eliminate the cond
+-                if loop_info.is_for_loop && !*is_break {
+-                    // At the very least, the syntax macro will need to advance the ghost iterator
+-                    // at each continue.
+-                    return Err(error(&stm.span, "for-loops do not yet support continue"));
+-                }
++                // For-loop wrapper next advances exec and ghost iterator state before
++                // entering the user body. The macro checks index/snapshot advancement
++                // before introducing its immutable pre-next annotation shadow.
++                // Keep the entry invariants and decreases checks below for continue;
++                // these refer to the live wrapper, not the user annotation shadow.
+                 let invs = if *is_break {
+                     loop_info.invs_exit.clone()
+                 } else {

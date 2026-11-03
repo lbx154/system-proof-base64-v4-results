@@ -1,0 +1,30 @@
+--- a/source/builtin_macros/src/syntax.rs
++++ b/source/builtin_macros/src/syntax.rs
+@@ -4024,8 +4024,10 @@
+         //      };
+         //      VERUS_loop_result
+         //  }
+-        // Note that "continue" and labels are not yet supported;
+-        // continue would also need to call ghost_advance.
++        // A successful wrapper next already advances ghost index/history, before
++        // the immutable pre-next ghost shadow is introduced for user annotations.
++        // Continue therefore uses the ordinary loop invariant/decreases edge.
++        // Check the advancement here on every Some edge, including continue paths.
+         let span = for_loop.span();
+ 
+         let verus_syn::ExprForLoop {
+@@ -4220,6 +4222,14 @@
+             let #pat = VERUS_loop_next;
+             #[verifier::proof_block]
+             {
++                // Checked, not assumed: next must advance exactly one position.
++                // This executes before the pre-next ghost binding shadows the wrapper.
++                #vstd::prelude::assert_(
++                    #x_iter_name.index.view() == #x_iter_body_old.index.view() + #vstd::prelude::spec_literal_integer("1")
++                );
++                #vstd::prelude::assert_(
++                    #vstd::prelude::spec_eq(#x_iter_name.snapshot.view(), #x_iter_body_old.snapshot.view())
++                );
+                 // This assertion helps add the results of the peek operation into Z3's context
+                 #vstd::prelude::assert_(#vstd::std_specs::iter::trigger_peek_implications(
+                     #vstd::std_specs::iter::IteratorSpec::peek(&#x_iter_body_old.snapshot.view(), #x_iter_body_old.index.view())
