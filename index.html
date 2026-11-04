@@ -17873,6 +17873,12 @@ How to run this here: use the system_proof skill pack (read its SKILL.md first; 
 </section>
 
 <section id="repro">
+  <h2>在自己的机器上复现 E 组</h2>
+  <p>完整的 base64 源码（带证明的验证版和原版）、Verus 补丁和脚本都在仓库的 <a href="https://github.com/lbx154/system-proof-base64-v4-results/tree/main/base64-v4-E/reproduce" target="_blank" rel="noopener"><code>base64-v4-E/reproduce/</code></a> 里，不依赖我们的机器：</p>
+  <pre><code>git clone https://github.com/lbx154/system-proof-base64-v4-results
+cd system-proof-base64-v4-results/base64-v4-E/reproduce
+./run.sh   # 期望最后一行：verification results:: 179 verified, 0 errors</code></pre>
+  <p class="small">脚本拉取 Verus（tangruize/verus @ d85f7578），打上 28 行补丁，用 Rust 1.98.1 / Z3 4.16.0 编译，再对完整源码跑审计时的同一条命令。第一次约 15–30 分钟。</p>
   <h2>复现 C 组的审计重放</h2>
   <p>在原机器上运行，工具链在验证 checkout 的 <code>.tools/</code> 下。这正是插件审计时跑的命令：</p>
   <pre><code>C=/fastdata/v-boxiuli/noah/exp/tsC

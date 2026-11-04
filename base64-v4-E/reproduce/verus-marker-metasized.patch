@@ -1,0 +1,28 @@
+--- a/source/rust_verify/src/rust_to_vir_func.rs
++++ b/source/rust_verify/src/rust_to_vir_func.rs
+@@ -2798,7 +2798,24 @@
+     let tcx = ctxt.tcx;
+     preds.retain(|p: &Clause<'tcx>| match p.kind().skip_binder() {
+         rustc_middle::ty::ClauseKind::<'tcx>::Trait(tp) => {
+-            if in_trait && trait_ids.contains(&tp.trait_ref.def_id) && tp.trait_ref.args.len() >= 1
++            // The synthetic ExternalTraitSpecificationFor associated type has an
++            // implicit MetaSized bound in Rust 1.98. This is a bound on the proxy
++            // marker, not on the external trait's Self or its generic arguments.
++            if in_trait
++                && ex_trait_assoc.is_some()
++                // Only the proxy predicate list includes the marker's defining
++                // trait. Keep real external Self: MetaSized bounds for comparison.
++                && ex_trait_assoc.and_then(|arg| arg.as_type()).is_some_and(|ty| {
++                    matches!(ty.kind(), ty::TyKind::Alias(_, alias)
++                        if matches!(alias.kind, AliasTyKind::Projection { def_id }
++                            if trait_ids.contains(&tcx.parent(def_id))))
++                })
++                && tp.trait_ref.args.len() >= 1
++                && Some(tp.trait_ref.args[0]) == ex_trait_assoc
++                && Some(tp.trait_ref.def_id) == tcx.lang_items().meta_sized_trait()
++            {
++                false
++            } else if in_trait && trait_ids.contains(&tp.trait_ref.def_id) && tp.trait_ref.args.len() >= 1
+             {
+                 if let Some(ty) = tp.trait_ref.args[0].as_type() {
+                     match ty.kind() {

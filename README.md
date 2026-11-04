@@ -79,7 +79,8 @@ E 只用 59 分钟就过了 C 卡了 5 小时的那一关。
 index.html        网页版，所有材料全文
 base64-v4-E/      E 组（最新）
   final-report.md   最终报告，Reviewer 写的
-  proof/            规约、调用方、证明，以及和原代码的完整差异
+  reproduce/        完整的验证版源码和原版源码、Verus 补丁、一键复现脚本
+  proof/            规约、调用方、证明，以及和原代码的完整差异（方便单独看）
   trust/            Verus 补丁和它的评估、改写的论证、前提的说明
   operator/         当时给我们的选项和我们的回复
   audit-verification.log / independent-replay.log   团队的重放和我自己的重放
@@ -88,21 +89,31 @@ base64-v4-C/      C 组，结构差不多
 base64-v4-A/      A 组
 ```
 
-## 自己重放一遍
+## 在自己的机器上复现
 
-在我们的机器上，下面这几行就能复现 E 的 179/0：
+完整的源码都在仓库里，不用连我们的机器：
 
 ```bash
-E=/fastdata/v-boxiuli/noah/exp/tsE
-H=$E/home/pack-homes/system_proof/0.2.1
-export RUSTUP_HOME=$H/rustup CARGO_HOME=$H/cargo
-export SYSTEM_PROOF_VERUS_HOME=$H/system-proof-agent/vertical/argus_system_proof/tools/verus-validation/toolchain/bin
-export VERUS_Z3_PATH=$SYSTEM_PROOF_VERUS_HOME/z3
-export PATH=$H/system-proof-agent/.venv/bin:$SYSTEM_PROOF_VERUS_HOME:$CARGO_HOME/bin:$PATH
-verus-run verify $E/task/verification --package base64
+git clone https://github.com/lbx154/system-proof-base64-v4-results
+cd system-proof-base64-v4-results/base64-v4-E/reproduce
+./run.sh      # 最后一行应该是：verification results:: 179 verified, 0 errors
 ```
 
-C 的复现命令在 [网页版](https://lbx154.github.io/system-proof-base64-v4-results/#repro) 里。
+`run.sh` 会做这几件事：
+1. 拉取 Verus（`tangruize/verus` 的 `d85f7578`）；
+2. 打上那个 28 行补丁；
+3. 编译 Verus；
+4. 对**完整的** base64 源码跑验证。
+
+第一次跑大约要 15–30 分钟，大部分时间花在编译 Verus 上。
+
+目录里同时放了：
+- `base64-verification/`：带证明的完整验证版；
+- `base64-production/`：没动过的原版。
+
+`diff -r` 一下就能看到全部改动。细节见 [`base64-v4-E/reproduce/README.md`](base64-v4-E/reproduce/README.md)。
+
+C 的复现命令在 [网页版](https://lbx154.github.io/system-proof-base64-v4-results/#repro) 里，目前只能在我们的机器上跑。
 
 ---
 
