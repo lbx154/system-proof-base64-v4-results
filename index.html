@@ -112,7 +112,7 @@ pre { margin: 0; padding: 12px 14px; background: var(--code-bg); border-top: 1px
       <tr><td>证明对象</td><td>抽出来的副本（handoff 目录里的证明文件），146/0</td><td>验证 checkout 里的真实源码；源码对生产 +1442/−69 行，多为证明注解</td><td>验证 checkout 里的真实源码；源码对生产 +1640/−185 行，多为证明注解</td></tr>
       <tr><td>Verus 改动</td><td>3 个补丁：t9 <code>rust_to_vir_func.rs</code>、t14 <code>syntax.rs</code> 和 <code>sst_to_air.rs</code>；另往 vstd 加了规约，原版 Verus 编译不过</td><td>2 个编译器补丁：T3、T29；另有一处 vstd 增补（22 行，一条 axiom）。都单独存档并列入可信基</td><td>1 个前端补丁（t7，28 行）：只去掉一个合成出来的 marker 的 MetaSized 约束；列入可信基 TCB-03</td></tr>
       <tr><td>可信基（只信不证）</td><td class="num">直接 20 组 + 剩余 6 组</td><td class="num">直接 14 组 + 剩余 1 组</td><td class="num">直接 10 组 + 剩余 2 组</td></tr>
-      <tr><td>流程</td><td>停在 audit，最终报告没装好</td><td>ground → prove → audit 全过，报告由 Reviewer 撰写、已装好并核对哈希</td><td>三阶段全过；audit 曾因 Drop 反例退回 prove，加前提后重过</td></tr>
+      <tr><td>流程</td><td>停在 audit，最终报告没装好</td><td>ground → prove → audit 全过，报告由 Reviewer 撰写</td><td>三阶段全过；audit 曾因 Drop 反例退回 prove，加前提后重过</td></tr>
       <tr><td>生产代码</td><td>版本 <code>5d574f8</code>，未改</td><td>版本 <code>47fa113</code>，未改。两次准备生成的提交哈希不同，<code>src</code> 内容逐字节相同（已 diff）</td><td>版本 <code>d9ce0de</code>，未改；<code>src</code> 与 A、C 逐字节相同</td></tr>
       <tr><td>花费 / 用时</td><td class="num">$18.69 / 3h06</td><td class="num">$104.12 / 5h55</td><td class="num">$30.09 / 约 2.5h（另有一夜在等操作员）</td></tr>
       <tr><td>人工介入</td><td>无</td><td>3 次，原文见下文“操作员消息”</td><td>1 次：选 B（见 E 组“操作员消息”）</td></tr>
@@ -147,7 +147,7 @@ pre { margin: 0; padding: 12px 14px; background: var(--code-bg); border-top: 1px
   <h2>E 组材料（全文）</h2>
   <p>E 组用最新的 ts-core（四个角色边做边协作、技能包自动准备）和技能包 0.2.1，开头就允许不改行为的改写，工作目录不手动准备。中途操作员在 A/B/C 中选了 B，之后技能包换成 0.2.3（团队自己做选择、去掉走流程的任务）。</p>
   <h3>结论与报告</h3>
-  <details class="file"><summary><span class="fname">E 组最终报告（Reviewer 撰写，SHA-256 28e54989…fadd6e9）</span><span class="meta">base64-v4-E/final-report.md · 342 行 · 35,220 字节</span></summary><p class="fnote"><a href="https://github.com/lbx154/system-proof-base64-v4-results/blob/main/base64-v4-E/final-report.md" target="_blank" rel="noopener">在 GitHub 打开原文件</a></p><pre><code>+++
+  <details class="file"><summary><span class="fname">E 组最终报告（Reviewer 撰写）</span><span class="meta">base64-v4-E/final-report.md · 342 行 · 35,220 字节</span></summary><p class="fnote"><a href="https://github.com/lbx154/system-proof-base64-v4-results/blob/main/base64-v4-E/final-report.md" target="_blank" rel="noopener">在 GitHub 打开原文件</a></p><pre><code>+++
 schema = &quot;system-proof/final-report-v1&quot;
 verdict = &quot;conditional&quot;
 source_revision = &quot;d9ce0dea622ff80eacb736f95e9488cf1eaa06f4&quot;
@@ -10133,7 +10133,7 @@ The codec snapshot is the actual effective immutable slice and destination state
 <section id="c">
   <h2>C 组材料（全文）</h2>
   <h3>结论与报告</h3>
-  <details class="file"><summary><span class="fname">最终报告（Reviewer 撰写，SHA-256 91b7864f…0ad2c6）</span><span class="meta">base64-v4-C/final-report.md · 385 行 · 36,616 字节</span></summary><p class="fnote">报告里的相对链接（../src/…、t31/…、../t80-handoff/…）是相对原机器的 verification/.system-proof/ 写的，关键文件已收在本页下方。</p><p class="fnote"><a href="https://github.com/lbx154/system-proof-base64-v4-results/blob/main/base64-v4-C/final-report.md" target="_blank" rel="noopener">在 GitHub 打开原文件</a></p><pre><code>+++
+  <details class="file"><summary><span class="fname">最终报告（Reviewer 撰写）</span><span class="meta">base64-v4-C/final-report.md · 385 行 · 36,616 字节</span></summary><p class="fnote">报告里的相对链接（../src/…、t31/…、../t80-handoff/…）是相对原机器的 verification/.system-proof/ 写的，关键文件已收在本页下方。</p><p class="fnote"><a href="https://github.com/lbx154/system-proof-base64-v4-results/blob/main/base64-v4-C/final-report.md" target="_blank" rel="noopener">在 GitHub 打开原文件</a></p><pre><code>+++
 schema = &quot;system-proof/final-report-v1&quot;
 verdict = &quot;conditional&quot;
 source_revision = &quot;47fa113a5c309fd7dcf5618d0f738cc9056d4402&quot;

@@ -61,7 +61,7 @@
 
 ## E 组证明了什么
 
-最终报告：`base64-v4-E/final-report.md`，由 Reviewer 撰写，SHA-256 `28e54989029877dcf16a3632c397c75e55cf1b2fdb91ad3a08a04caa2fadd6e9`。
+最终报告：`base64-v4-E/final-report.md`，由 Reviewer 撰写。
 
 - **规约**（`proof/round_trip_spec.rs`）：按 STANDARD 定义规范编码。设 n 为输入长度，E = 4⌈n/3⌉，D = 3⌈E/4⌉。
 - **支持范围**：n ≤ 3⌊isize::MAX/4⌋，由字节切片的长度上限和补齐后的输出容量推出，不是“实现接受什么就算什么”。两个目标缓冲区的长度分别至少为 E 和 D，原有内容任意。空输入、全零、非 UTF-8 字节、以及块边界两侧的每种余数，都在范围内。
@@ -85,7 +85,7 @@
 
 ## C 组证明了什么
 
-最终报告：`base64-v4-C/final-report.md`，SHA-256 `91b7864f…0ad2c6`。
+最终报告：`base64-v4-C/final-report.md`，由 Reviewer 撰写。
 
 - **规约**（`proof/round_trip_spec.rs`）：按 RFC 4648 STANDARD 逐字节定义编码，包括字母表、每 3 字节变 4 个字符、用 `=` 补齐。
 - **结论**：证明了真实 `encode_slice` 的输出逐字节等于这个编码；只用返回的前缀去 `decode_slice` 能拿回原字节；两个缓冲区报告长度之后的字节不变；支持范围内没有错误也没有 panic。
