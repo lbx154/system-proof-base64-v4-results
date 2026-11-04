@@ -1,0 +1,1283 @@
+$ verus-run verify /fastdata/v-boxiuli/noah/exp/tsE/task/verification --preset base64
+cwd: /fastdata/v-boxiuli/noah/exp/tsE/task/verification
+env: RUSTUP_TOOLCHAIN=1.98.1-x86_64-unknown-linux-gnu
+env: PATH=/fastdata/v-boxiuli/noah/exp/tsE/task/verification/.system-proof/t3/frontend/bin:/usr/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/fastdata/v-boxiuli/noah/exp/tsE/codex/tmp/arg0-linux/codex-arg0dBjjQg:/usr/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/fastdata/v-boxiuli/noah/exp/tsE/home/pack-homes/system_proof/0.2.1/system-proof-agent/.venv/bin:/fastdata/v-boxiuli/noah/exp/tsE/home/pack-homes/system_proof/0.2.1/system-proof-agent/vertical/argus_system_proof/tools/verus-validation/toolchain/bin:/fastdata/v-boxiuli/noah/exp/tsE/home/pack-homes/system_proof/0.2.1/cargo/bin:/usr/bin:/usr/local/bin:/usr/bin:/bin:/snap/bin
+run: /fastdata/v-boxiuli/noah/exp/tsE/task/verification/.system-proof/t3/frontend/verus/source/target-verus/release/verus /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/lib.rs --crate-type lib --edition 2021 --cfg 'feature="std"' --cfg 'feature="alloc"' --rlimit 20
+latest output: /fastdata/v-boxiuli/noah/exp/tsE/task/verification/target/verus-validation/latest.log
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:52:5
+   |
+52 |     #[verus_spec(result => ensures result == self.capacity())]
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:80:1
+   |
+80 | / #[verus_spec(result =>
+81 | |     with Ghost(x): Ghost<Seq<u8>>,
+82 | |     requires estimate.remainder() == input@.len() % 4,
+83 | |         forall|i: &[u8], n: usize, o: &mut [u8]| #[trigger] call_requires(simd_prefix,(i,n,o)),
+...  |
+93 | |     },
+94 | | )]
+   | |__^
+   |
+   = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:145:9
+    |
+145 |         reveal(decoder_image);
+    |         ^^^^^^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:233:1
+    |
+233 | / #[verus_spec(result =>
+234 | |     with Ghost(x): Ghost<Seq<u8>>,
+235 | |     requires input_index_start <= input_index_end <= input.len(),
+236 | |         input_index_start % 4 == 0, input_index_end % 4 == 0,
+...   |
+243 | |             forall|j: int| output_index_start <= j < input_index_end / 4 * 3 ==> final(output)@[j] == x[j]),
+244 | | )]
+    | |__^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:253:5
+    |
+253 |     hide(chunk_byte);
+    |     ^^^^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:274:9
+    |
+274 |         reveal(canonical_quads_use);
+    |         ^^^^^^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:275:9
+    |
+275 |         reveal(decoder_image);
+    |         ^^^^^^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:277:9
+    |
+277 |         reveal(decoder_image);
+    |         ^^^^^^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:473:1
+    |
+473 | / #[verus_spec(result =>
+474 | |     with Ghost(x): Ghost<Seq<u8>>,
+475 | |     requires input_len_rem == input.len() % 4,
+476 | |     ensures
+...   |
+490 | |             result == Ok(crate::engine::general_purpose::decode_suffix::terminal_input_index(x) as usize),
+491 | | )]
+    | |__^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:614:1
+    |
+614 | / #[verus_spec(result =>
+615 | |     requires input.len() >= 8,
+616 | |         (exists|i: int| 0 <= i < 8 && decode_table@[input@[i] as int] == 255u8)
+617 | |             || old(output).len() >= 6,
+...   |
+630 | |         forall|i: int| 6 <= i < final(output)@.len() ==> final(output)@[i] == old(output)@[i],
+631 | | )]
+    | |__^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:744:1
+    |
+744 | / #[verus_spec(result =>
+745 | |     requires input.len() >= 4,
+746 | |         (exists|i: int| 0 <= i < 4 && decode_table@[input@[i] as int] == 255u8)
+747 | |             || old(output).len() >= 3,
+...   |
+760 | |         forall|i: int| 3 <= i < final(output)@.len() ==> final(output)@[i] == old(output)@[i],
+761 | | )]
+    | |__^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode_suffix.rs:203:1
+    |
+203 | / #[verus_spec(result =>
+204 | |     with Ghost(t): Ghost<Seq<u8>>
+205 | |     requires input_index <= input.len(), input.len() - input_index <= 4,
+206 | |         output_index <= old(output)@.len(),
+...   |
+222 | |     },
+223 | | )]
+    | |__^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:104:5
+    |
+104 |     #[verus_spec]
+    |     ^^^^^^^^^^^^^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/mod.rs:256:5
+    |
+256 | /     #[verus_spec(result =>
+257 | |         with -> observation: Ghost<(Seq<u8>, Seq<u8>, Seq<u8>)>
+258 | |         requires self.is_standard(),
+259 | |             AsRefSpec::conversion_environment(&input),
+...   |
+267 | |                 crate::round_trip_spec::encode_contract(observation@.0, observation@.0, observation@.1, final(output_buf)@, result),
+268 | |     )]
+    | |______^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: #[verus_spec] is likely used inside a verus! block.
+                     Consider move it out of verus! or remove #[verus_spec].
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/mod.rs:463:5
+    |
+463 | /     #[verus_spec(result =>
+464 | |         with -> observation: Ghost<(Seq<u8>, Seq<u8>, Seq<u8>)>
+465 | |         requires AsRefSpec::conversion_environment(&input),
+466 | |             AsRefSpec::cleanup_environment(&input),
+...   |
+472 | |                 crate::round_trip_spec::round_trip_decode_contract(observation@.0, observation@.0, observation@.1, final(output)@...
+473 | |     )]
+    | |______^
+    |
+    = note: this warning originates in the attribute macro `verus_spec` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/mod.rs:552:1
+    |
+552 | /// The minimal level of configuration that engines must support.
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+    = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/mod.rs:573:1
+    |
+573 | / /// The decode estimate used by an engine implementation. Users do not need to interact with this;
+574 | | /// it is only for engine implementors.
+575 | | ///
+576 | | /// Implementors may store relevant data here when constructing this to avoid having to calculate
+577 | | /// them again during actual decoding.
+    | |_-------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:172:1
+    |
+172 | / /// Scalar base64 encode of `input` into `output`, returning the number of bytes written.
+173 | | ///
+174 | | /// `simd_prefix` gets first crack at the input, returning `(input_consumed, output_written)`. It
+175 | | /// must consume whole 3-byte groups: `input_consumed % 3 == 0`, `output_written == input_consumed /
+176 | | /// 3 * 4`, both in bounds, and only those `output_written` bytes are written. `(0, 0)` (pure scalar)
+177 | | /// is always valid.
+    | |_-------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:557:1
+    |
+557 | /// Returns a table mapping a 6-bit index to the ASCII byte encoding of the index
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:581:1
+    |
+581 | / /// Returns a table mapping base64 bytes as the lookup index to either:
+582 | | /// - [`INVALID_VALUE`] for bytes that aren't members of the alphabet
+583 | | /// - a byte whose lower 6 bits are the value that was encoded into the index byte
+    | |_---------------------------------------------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:763:1
+    |
+763 | / /// A [`GeneralPurpose`] engine using the [`alphabet::STANDARD`] base64 alphabet and [`PAD`] config.
+764 | | ///
+765 | | /// Does not allow trailing bits when decoding.
+    | |_----------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:818:1
+    |
+818 | / /// Include padding bytes when encoding, and require that they be present when decoding.
+819 | | ///
+820 | | /// Does not allow trailing bits when decoding.
+821 | | ///
+822 | | /// This is the standard per the base64 RFC, but consider using [`NO_PAD`] or [`NO_PAD_INDIFFERENT`]
+823 | | /// instead as padding serves little purpose in practice.
+    | |_--------------------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:71:1
+   |
+71 | / /// Helper to avoid duplicating `num_chunks` calculation, which is costly on short inputs.
+72 | | /// Returns the decode metadata, or an error.
+   | |_--------------------------------------------^
+   |   |
+   |   rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused attribute `allow`
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:76:1
+   |
+76 | #[allow(clippy::too_many_arguments)]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+note: the built-in attribute `allow` will be ignored, since it's applied to the macro invocation `verus`
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:78:1
+   |
+78 | verus! {
+   | ^^^^^
+   = note: `#[warn(unused_attributes)]` (part of `#[warn(unused)]`) on by default
+
+warning: `#[inline]` attribute cannot be used on macro calls
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:77:1
+   |
+77 | #[inline]
+   | ^^^^^^^^^
+   |
+   = help: `#[inline]` can only be applied to functions
+   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!
+   = note: placing this attribute on a macro invocation does nothing even if the macro expands to what would be a valid target for the attribute
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:192:1
+    |
+192 | / /// Decode the complete non-terminal quads in `input[input_index_start..input_index_end]` (both
+193 | | /// bounds multiples of 4), writing to `output` starting at `output_index_start`, which must equal
+194 | | /// `input_index_start / 4 * 3`. Error offsets are reported in absolute input coordinates.
+    | |_-----------------------------------------------------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:456:1
+    |
+456 | / /// Returns the length of complete quads, except for the last one, even if it is complete.
+457 | | ///
+458 | | /// Returns an error if the output len is not big enough for decoding those complete quads, or if
+459 | | /// the input % 4 == 1, and that last byte is an invalid value other than a pad byte.
+...   |
+462 | | /// - `input_len_rem` is input len % 4
+463 | | /// - `output_len` is the length of the output slice
+    | |_---------------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:604:1
+    |
+604 | / /// Decode 8 bytes of input into 6 bytes of output.
+605 | | ///
+606 | | /// `input` is the 8 bytes to decode.
+607 | | /// `index_at_start_of_input` is the offset in the overall input (used for reporting errors
+608 | | /// accurately)
+609 | | /// `decode_table` is the lookup table for the particular base64 alphabet.
+610 | | /// `output` will have its first 6 bytes overwritten
+    | |_---------------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:741:1
+    |
+741 | /// Like [`decode_chunk_8`] but for 4 bytes of input and 3 bytes of output.
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/alphabet.rs:10:1
+   |
+10 | /// Unsurprisingly, there are 64 symbols in a Base64 alphabet.
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/alphabet.rs:13:1
+   |
+13 | /// Pad symbol for non-weird alphabets.
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/alphabet.rs:241:1
+    |
+241 | / /// The standard alphabet (with `+` and `/`) specified in [RFC 4648][].
+242 | | ///
+243 | | /// [RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648#section-4
+    | |_----------------------------------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/encode.rs:148:1
+    |
+148 | / /// Write padding characters.
+149 | | /// `unpadded_output_len` is the size of the unpadded but base64 encoded data.
+150 | | /// `output` is the slice where padding should be written, of length at least 2.
+151 | | ///
+152 | | /// Returns the number of padding bytes written.
+    | |_-----------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: Verus does not (yet) support autoderive Clone impl when the clone is not a copy; continuing, but without adding a specification for the derived Clone impl
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:32:17
+   |
+32 | #[derive(Debug, Clone)]
+   |                 ^^^^^
+   |
+   = help: to suppress this warning, use `#[verifier::allow(autoderive_clone_without_spec)]` on the surrounding function, datatype, or module or `#![verifier::allow(autoderive_clone_without_spec)]` in the module or crate
+
+warning: Verus does not (yet) support autoderive Clone impl when the clone is not a copy; continuing, but without adding a specification for the derived Clone impl
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/alphabet.rs:60:10
+   |
+60 | #[derive(Clone, Eq, PartialEq)]
+   |          ^^^^^
+   |
+   = help: to suppress this warning, use `#[verifier::allow(autoderive_clone_without_spec)]` on the surrounding function, datatype, or module or `#![verifier::allow(autoderive_clone_without_spec)]` in the module or crate
+
+warning: Verus does not (yet) support autoderive Clone impl when the clone is not a copy; continuing, but without adding a specification for the derived Clone impl
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/encode.rs:180:10
+    |
+180 | #[derive(Clone, Debug, PartialEq, Eq)]
+    |          ^^^^^
+    |
+    = help: to suppress this warning, use `#[verifier::allow(autoderive_clone_without_spec)]` on the surrounding function, datatype, or module or `#![verifier::allow(autoderive_clone_without_spec)]` in the module or crate
+
+warning: autoderive Clone impl does not take the form Verus expects; continuing, but without adding a specification for the derived Clone impl
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/decode.rs:11:10
+   |
+11 | #[derive(Clone, PartialEq, Eq)]
+   |          ^^^^^
+   |
+   = help: to suppress this warning, use `#[verifier::allow(autoderive_clone_without_spec)]` on the surrounding function, datatype, or module or `#![verifier::allow(autoderive_clone_without_spec)]` in the module or crate
+
+warning: autoderive Clone impl does not take the form Verus expects; continuing, but without adding a specification for the derived Clone impl
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/decode.rs:93:10
+   |
+93 | #[derive(Clone, Debug, PartialEq, Eq)]
+   |          ^^^^^
+   |
+   = help: to suppress this warning, use `#[verifier::allow(autoderive_clone_without_spec)]` on the surrounding function, datatype, or module or `#![verifier::allow(autoderive_clone_without_spec)]` in the module or crate
+
+note: automatically chose triggers for this expression:
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/as_ref_spec.rs:31:5
+   |
+31 |     exists|returned: &[u8]| returned@ == bytes && AsRefSpec::as_ref_post(input, returned)
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/as_ref_spec.rs:31:29
+   |
+31 |     exists|returned: &[u8]| returned@ == bytes && AsRefSpec::as_ref_post(input, returned)
+   |                             ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/round_trip_spec.rs:84:5
+   |
+84 |     forall|x: Seq<u8>| decode_requires(x, encoded, before) ==> decode_contract(x, encoded, encoded_after, before, after, result)
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/round_trip_spec.rs:84:24
+   |
+84 |     forall|x: Seq<u8>| decode_requires(x, encoded, before) ==> decode_contract(x, encoded, encoded_after, before, after, result)
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/encode.rs:171:13
+    |
+171 |             forall|j: int| i <= j < output@.len() ==> output@[j] == before[j],
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/encode.rs:171:69
+    |
+171 |             forall|j: int| i <= j < output@.len() ==> output@[j] == before[j],
+    |                                                                     ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:550:9
+    |
+550 |         forall|v: nat| v < 64 ==> table[standard_symbol(v) as int] == v as u8,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:550:41
+    |
+550 |         forall|v: nat| v < 64 ==> table[standard_symbol(v) as int] == v as u8,
+    |                                         ^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode_suffix.rs:29:9
+   |
+29 |         forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode_suffix.rs:29:41
+   |
+29 |         forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8,
+   |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/round_trip_proof.rs:64:9
+   |
+64 |         forall|v: nat| v < 64 ==> table[standard_symbol(v) as int] == v as u8,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/round_trip_proof.rs:64:41
+   |
+64 |         forall|v: nat| v < 64 ==> table[standard_symbol(v) as int] == v as u8,
+   |                                         ^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/round_trip_proof.rs:108:5
+    |
+108 |     assert forall|v: nat| v < 64 implies table[standard_symbol(v) as int] == v as u8 by {
+    |     ^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/round_trip_proof.rs:108:48
+    |
+108 |     assert forall|v: nat| v < 64 implies table[standard_symbol(v) as int] == v as u8 by {
+    |                                                ^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/round_trip_proof.rs:141:5
+    |
+141 |     assert forall|y: Seq<u8>| decode_requires(y, encoded, before) implies decode_contract(y, encoded, encoded_after, before, after,...
+    |     ^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/round_trip_proof.rs:141:31
+    |
+141 |     assert forall|y: Seq<u8>| decode_requires(y, encoded, before) implies decode_contract(y, encoded, encoded_after, before, after,...
+    |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode_suffix.rs:193:8
+    |
+193 |     && forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode_suffix.rs:193:40
+    |
+193 |     && forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8
+    |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode_suffix.rs:256:27
+    |
+256 |             canonical ==> forall|v: nat| v < 64 ==> decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8,
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode_suffix.rs:256:67
+    |
+256 |             canonical ==> forall|v: nat| v < 64 ==> decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8,
+    |                                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode_suffix.rs:264:27
+    |
+264 |             canonical ==> forall|j: int| 0 <= j < morsels_in_leftover ==> morsels@[j] == tail_value(t,j),
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode_suffix.rs:264:90
+    |
+264 |             canonical ==> forall|j: int| 0 <= j < morsels_in_leftover ==> morsels@[j] == tail_value(t,j),
+    |                                                                                          ^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode_suffix.rs:398:9
+    |
+398 |         assert forall|k: int| 0 <= k < 4 implies morsels@[k] == tail_value(t,k) by {
+    |         ^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode_suffix.rs:398:65
+    |
+398 |         assert forall|k: int| 0 <= k < 4 implies morsels@[k] == tail_value(t,k) by {
+    |                                                                 ^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:67:8
+   |
+67 |     && forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:67:40
+   |
+67 |     && forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8
+   |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:81:12
+   |
+81 |         && forall|i: int| 0 <= i < 64 ==> self.decode_table@[self.encode_table@[i] as int] == i as u8
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:81:62
+   |
+81 |         && forall|i: int| 0 <= i < 64 ==> self.decode_table@[self.encode_table@[i] as int] == i as u8
+   |                                                              ^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:857:44
+    |
+857 |         && (distinct(alphabet.bytes()) ==> forall|i: int| 0 <= i < 64 ==> self.decode_table@[alphabet.bytes()[i] as int] == i as u8)
+    |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:857:94
+    |
+857 |         && (distinct(alphabet.bytes()) ==> forall|i: int| 0 <= i < 64 ==> self.decode_table@[alphabet.bytes()[i] as int] == i as u8)
+    |                                                                                              ^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:464:17
+    |
+464 |                 forall|j: int| output_index <= j < output@.len() ==> output@[j] == before[j],
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:464:84
+    |
+464 |                 forall|j: int| output_index <= j < output@.len() ==> output@[j] == before[j],
+    |                                                                                    ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:512:13
+    |
+512 |             forall|j: int| output_index <= j < output@.len() ==> output@[j] == before[j],
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:512:80
+    |
+512 |             forall|j: int| output_index <= j < output@.len() ==> output@[j] == before[j],
+    |                                                                                ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:122:17
+    |
+122 | ...   assert forall|v: nat| v < 64 implies self.decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8 by {
+    |       ^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:122:73
+    |
+122 | ...   assert forall|v: nat| v < 64 implies self.decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8 by {
+    |                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:569:17
+    |
+569 |                 forall|j: int| 0 <= j < index ==> encode_table@[j] == alphabet.symbols@[j],
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:569:51
+    |
+569 |                 forall|j: int| 0 <= j < index ==> encode_table@[j] == alphabet.symbols@[j],
+    |                                                   ^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:587:44
+    |
+587 |     ensures distinct(alphabet.bytes()) ==> forall|i: int| 0 <= i < 64 ==> result@[alphabet.symbols@[i] as int] == i as u8,
+    |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:587:83
+    |
+587 |     ensures distinct(alphabet.bytes()) ==> forall|i: int| 0 <= i < 64 ==> result@[alphabet.symbols@[i] as int] == i as u8,
+    |                                                                                   ^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:606:13
+    |
+606 |             assert forall|j: int| 0 <= j < index + 1 && distinct(alphabet.bytes()) implies
+    |             ^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:607:31
+    |
+607 |                 decode_table@[alphabet.symbols@[j] as int] == j as u8 by {
+    |                               ^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:598:44
+    |
+598 |             distinct(alphabet.bytes()) ==> forall|j: int| 0 <= j < index ==> decode_table@[alphabet.symbols@[j] as int] == j as u8,
+    |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:598:92
+    |
+598 |             distinct(alphabet.bytes()) ==> forall|j: int| 0 <= j < index ==> decode_table@[alphabet.symbols@[j] as int] == j as u8,
+    |                                                                                            ^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:230:12
+    |
+230 |         && forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:230:44
+    |
+230 |         && forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8
+    |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:574:9
+    |
+574 |         forall|v: nat| v < 64 ==> table[standard_symbol(v) as int] == v as u8,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:574:41
+    |
+574 |         forall|v: nat| v < 64 ==> table[standard_symbol(v) as int] == v as u8,
+    |                                         ^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:204:9
+    |
+204 |         forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:204:41
+    |
+204 |         forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8,
+    |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:218:9
+    |
+218 |         forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:218:41
+    |
+218 |         forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8,
+    |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:616:9
+    |
+616 |         (exists|i: int| 0 <= i < 8 && decode_table@[input@[i] as int] == 255u8)
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:616:53
+    |
+616 |         (exists|i: int| 0 <= i < 8 && decode_table@[input@[i] as int] == 255u8)
+    |                                                     ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:618:9
+    |
+618 | /         forall|i: int| 0 <= i < 8 && decode_table@[input@[i] as int] == 255u8
+619 | |             ==> index_at_start_of_input as int + i <= usize::MAX,
+    | |________________________________________________________________^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:618:52
+    |
+618 |         forall|i: int| 0 <= i < 8 && decode_table@[input@[i] as int] == 255u8
+    |                                                    ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:621:29
+    |
+621 |         result.is_ok() <==> (forall|i: int| 0 <= i < 8 ==> decode_table@[input@[i] as int] != 255u8),
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:621:74
+    |
+621 |         result.is_ok() <==> (forall|i: int| 0 <= i < 8 ==> decode_table@[input@[i] as int] != 255u8),
+    |                                                                          ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:625:16
+    |
+625 |             && (forall|k: int| 0 <= k < i ==> decode_table@[input@[k] as int] != 255u8)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:625:61
+    |
+625 |             && (forall|k: int| 0 <= k < i ==> decode_table@[input@[k] as int] != 255u8)
+    |                                                             ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:623:29
+    |
+623 |           result.is_err() ==> exists|i: int| 0 <= i < 8
+    |  _____________________________^
+624 | |             && decode_table@[input@[i] as int] == 255u8
+625 | |             && (forall|k: int| 0 <= k < i ==> decode_table@[input@[k] as int] != 255u8)
+626 | |             && result == Err(DecodeError::InvalidByte((index_at_start_of_input as int + i) as usize, input@[i])),
+    | |________________________________________________________________________________________________________________^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:624:30
+    |
+624 |             && decode_table@[input@[i] as int] == 255u8
+    |                              ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:627:9
+    |
+627 |         (forall|i: int| 0 <= i < 8 ==> decode_table@[input@[i] as int] < 64) ==>
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:627:54
+    |
+627 |         (forall|i: int| 0 <= i < 8 ==> decode_table@[input@[i] as int] < 64) ==>
+    |                                                      ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:628:34
+    |
+628 |             (result == Ok(()) && forall|j: int| 0 <= j < 6 ==> final(output)@[j] == chunk_byte(input@, decode_table@, j)),
+    |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:628:64
+    |
+628 |             (result == Ok(()) && forall|j: int| 0 <= j < 6 ==> final(output)@[j] == chunk_byte(input@, decode_table@, j)),
+    |                                                                ^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:746:9
+    |
+746 |         (exists|i: int| 0 <= i < 4 && decode_table@[input@[i] as int] == 255u8)
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:746:53
+    |
+746 |         (exists|i: int| 0 <= i < 4 && decode_table@[input@[i] as int] == 255u8)
+    |                                                     ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:748:9
+    |
+748 | /         forall|i: int| 0 <= i < 4 && decode_table@[input@[i] as int] == 255u8
+749 | |             ==> index_at_start_of_input as int + i <= usize::MAX,
+    | |________________________________________________________________^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:748:52
+    |
+748 |         forall|i: int| 0 <= i < 4 && decode_table@[input@[i] as int] == 255u8
+    |                                                    ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:751:29
+    |
+751 |         result.is_ok() <==> (forall|i: int| 0 <= i < 4 ==> decode_table@[input@[i] as int] != 255u8),
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:751:74
+    |
+751 |         result.is_ok() <==> (forall|i: int| 0 <= i < 4 ==> decode_table@[input@[i] as int] != 255u8),
+    |                                                                          ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:755:16
+    |
+755 |             && (forall|k: int| 0 <= k < i ==> decode_table@[input@[k] as int] != 255u8)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:755:61
+    |
+755 |             && (forall|k: int| 0 <= k < i ==> decode_table@[input@[k] as int] != 255u8)
+    |                                                             ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:753:29
+    |
+753 |           result.is_err() ==> exists|i: int| 0 <= i < 4
+    |  _____________________________^
+754 | |             && decode_table@[input@[i] as int] == 255u8
+755 | |             && (forall|k: int| 0 <= k < i ==> decode_table@[input@[k] as int] != 255u8)
+756 | |             && result == Err(DecodeError::InvalidByte((index_at_start_of_input as int + i) as usize, input@[i])),
+    | |________________________________________________________________________________________________________________^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:754:30
+    |
+754 |             && decode_table@[input@[i] as int] == 255u8
+    |                              ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:757:9
+    |
+757 |         (forall|i: int| 0 <= i < 4 ==> decode_table@[input@[i] as int] < 64) ==>
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:757:54
+    |
+757 |         (forall|i: int| 0 <= i < 4 ==> decode_table@[input@[i] as int] < 64) ==>
+    |                                                      ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:758:34
+    |
+758 |             (result == Ok(()) && forall|j: int| 0 <= j < 3 ==> final(output)@[j] == chunk_byte(input@, decode_table@, j)),
+    |                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:758:64
+    |
+758 |             (result == Ok(()) && forall|j: int| 0 <= j < 3 ==> final(output)@[j] == chunk_byte(input@, decode_table@, j)),
+    |                                                                ^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:243:13
+    |
+243 |             forall|j: int| output_index_start <= j < input_index_end / 4 * 3 ==> final(output)@[j] == x[j]),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:243:103
+    |
+243 |             forall|j: int| output_index_start <= j < input_index_end / 4 * 3 ==> final(output)@[j] == x[j]),
+    |                                                                                                       ^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:322:13
+    |
+322 |             assert forall|i: int| 0 <= i < 32 implies decode_table@[chunk@[i] as int] < 64 by {
+    |             ^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:322:69
+    |
+322 |             assert forall|i: int| 0 <= i < 32 implies decode_table@[chunk@[i] as int] < 64 by {
+    |                                                                     ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:298:27
+    |
+298 |             canonical ==> (forall|v: nat| v < 64 ==> decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8),
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:298:68
+    |
+298 |             canonical ==> (forall|v: nat| v < 64 ==> decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8),
+    |                                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:304:27
+    |
+304 |             canonical ==> (forall|j: int| output_index_start <= j < output_index_start + chunk_index * 24 ==> output@[j] == x[j]),
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:304:125
+    |
+304 |             canonical ==> (forall|j: int| output_index_start <= j < output_index_start + chunk_index * 24 ==> output@[j] == x[j]),
+    |                                                                                                                             ^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:305:13
+    |
+305 | ...   forall|j: int| 0 <= j < output@.len() && (j < output_index_start || j >= output_index_start + chunk_index * 24) ==> output@[j] == initial_output[j],
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:305:143
+    |
+305 | ...tput_index_start + chunk_index * 24) ==> output@[j] == initial_output[j],
+    |                                                           ^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:420:13
+    |
+420 |             assert forall|i: int| 0 <= i < 4 implies decode_table@[chunk@[i] as int] < 64 by {
+    |             ^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:420:68
+    |
+420 |             assert forall|i: int| 0 <= i < 4 implies decode_table@[chunk@[i] as int] < 64 by {
+    |                                                                    ^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:404:27
+    |
+404 |             canonical ==> (forall|v: nat| v < 64 ==> decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8),
+    |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:404:68
+    |
+404 |             canonical ==> (forall|v: nat| v < 64 ==> decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8),
+    |                                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:410:27
+    |
+410 | ...ical ==> (forall|j: int| output_index_start <= j < output_after_unroll_start + chunk_index * 3 ==> output@[j] == x[j]),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:410:131
+    |
+410 | ...   canonical ==> (forall|j: int| output_index_start <= j < output_after_unroll_start + chunk_index * 3 ==> output@[j] == x[j]),
+    |                                                                                                                             ^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:411:13
+    |
+411 | ...   forall|j: int| 0 <= j < output@.len() && (j < output_index_start || j >= output_after_unroll_start + chunk_index * 3) ==> output@[j] == initial_output[j],
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:411:149
+    |
+411 | ...fter_unroll_start + chunk_index * 3) ==> output@[j] == initial_output[j],
+    |                                                           ^^^^^^^^^^^^^^^^^
+
+note: automatically chose triggers for this expression:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:174:9
+    |
+174 |         assert forall|j: int| 0 <= j < x.len() implies output@[j] == x[j] by {
+    |         ^^^^^^
+
+note:   trigger 1 of 1:
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:174:70
+    |
+174 |         assert forall|j: int| 0 <= j < x.len() implies output@[j] == x[j] by {
+    |                                                                      ^^^^
+
+note: Verus printed one or more automatically chosen quantifier triggers
+      because it had low confidence in the chosen triggers.
+      To suppress these messages, do one of the following:
+        (1) manually annotate a single desired trigger using #[trigger]
+            (example: forall|i: int, j: int| f(i) && #[trigger] g(i) && #[trigger] h(j)),
+        (2) manually annotate multiple desired triggers using #![trigger ...]
+            (example: forall|i: int| #![trigger f(i)] #![trigger g(i)] f(i) && g(i)),
+        (3) accept the automatically chosen trigger using #![auto]
+            (example: forall|i: int, j: int| #![auto] f(i) && g(i) && h(j))
+        (4) use the --triggers-mode silent command-line option to suppress all printing of triggers.
+      (Note: triggers are used by the underlying SMT theorem prover to instantiate quantifiers;
+      the theorem prover instantiates a quantifier whenever some expression matches the
+      pattern specified by one of the quantifier's triggers.)
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:174:9
+    |
+174 |         assert forall|j: int| 0 <= j < x.len() implies output@[j] == x[j] by {
+    |         ^^^^^^
+
+verification results:: 179 verified, 0 errors
+warning: 38 warnings emitted
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/mod.rs:552:1
+    |
+552 | /// The minimal level of configuration that engines must support.
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+    = note: `#[warn(unused_doc_comments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/mod.rs:573:1
+    |
+573 | / /// The decode estimate used by an engine implementation. Users do not need to interact with this;
+574 | | /// it is only for engine implementors.
+575 | | ///
+576 | | /// Implementors may store relevant data here when constructing this to avoid having to calculate
+577 | | /// them again during actual decoding.
+    | |_-------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:172:1
+    |
+172 | / /// Scalar base64 encode of `input` into `output`, returning the number of bytes written.
+173 | | ///
+174 | | /// `simd_prefix` gets first crack at the input, returning `(input_consumed, output_written)`. It
+175 | | /// must consume whole 3-byte groups: `input_consumed % 3 == 0`, `output_written == input_consumed /
+176 | | /// 3 * 4`, both in bounds, and only those `output_written` bytes are written. `(0, 0)` (pure scalar)
+177 | | /// is always valid.
+    | |_-------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:557:1
+    |
+557 | /// Returns a table mapping a 6-bit index to the ASCII byte encoding of the index
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:581:1
+    |
+581 | / /// Returns a table mapping base64 bytes as the lookup index to either:
+582 | | /// - [`INVALID_VALUE`] for bytes that aren't members of the alphabet
+583 | | /// - a byte whose lower 6 bits are the value that was encoded into the index byte
+    | |_---------------------------------------------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:763:1
+    |
+763 | / /// A [`GeneralPurpose`] engine using the [`alphabet::STANDARD`] base64 alphabet and [`PAD`] config.
+764 | | ///
+765 | | /// Does not allow trailing bits when decoding.
+    | |_----------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/mod.rs:818:1
+    |
+818 | / /// Include padding bytes when encoding, and require that they be present when decoding.
+819 | | ///
+820 | | /// Does not allow trailing bits when decoding.
+821 | | ///
+822 | | /// This is the standard per the base64 RFC, but consider using [`NO_PAD`] or [`NO_PAD_INDIFFERENT`]
+823 | | /// instead as padding serves little purpose in practice.
+    | |_--------------------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:71:1
+   |
+71 | / /// Helper to avoid duplicating `num_chunks` calculation, which is costly on short inputs.
+72 | | /// Returns the decode metadata, or an error.
+   | |_--------------------------------------------^
+   |   |
+   |   rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:192:1
+    |
+192 | / /// Decode the complete non-terminal quads in `input[input_index_start..input_index_end]` (both
+193 | | /// bounds multiples of 4), writing to `output` starting at `output_index_start`, which must equal
+194 | | /// `input_index_start / 4 * 3`. Error offsets are reported in absolute input coordinates.
+    | |_-----------------------------------------------------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:456:1
+    |
+456 | / /// Returns the length of complete quads, except for the last one, even if it is complete.
+457 | | ///
+458 | | /// Returns an error if the output len is not big enough for decoding those complete quads, or if
+459 | | /// the input % 4 == 1, and that last byte is an invalid value other than a pad byte.
+...   |
+462 | | /// - `input_len_rem` is input len % 4
+463 | | /// - `output_len` is the length of the output slice
+    | |_---------------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:604:1
+    |
+604 | / /// Decode 8 bytes of input into 6 bytes of output.
+605 | | ///
+606 | | /// `input` is the 8 bytes to decode.
+607 | | /// `index_at_start_of_input` is the offset in the overall input (used for reporting errors
+608 | | /// accurately)
+609 | | /// `decode_table` is the lookup table for the particular base64 alphabet.
+610 | | /// `output` will have its first 6 bytes overwritten
+    | |_---------------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:741:1
+    |
+741 | /// Like [`decode_chunk_8`] but for 4 bytes of input and 3 bytes of output.
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/alphabet.rs:10:1
+   |
+10 | /// Unsurprisingly, there are 64 symbols in a Base64 alphabet.
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+  --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/alphabet.rs:13:1
+   |
+13 | /// Pad symbol for non-weird alphabets.
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ rustdoc does not generate documentation for macro invocations
+   |
+   = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/alphabet.rs:241:1
+    |
+241 | / /// The standard alphabet (with `+` and `/`) specified in [RFC 4648][].
+242 | | ///
+243 | | /// [RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648#section-4
+    | |_----------------------------------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: unused doc comment
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/encode.rs:148:1
+    |
+148 | / /// Write padding characters.
+149 | | /// `unpadded_output_len` is the size of the unpadded but base64 encoded data.
+150 | | /// `output` is the slice where padding should be written, of length at least 2.
+151 | | ///
+152 | | /// Returns the number of padding bytes written.
+    | |_-----------------------------------------------^
+    |   |
+    |   rustdoc does not generate documentation for macro invocations
+    |
+    = help: to document an item produced by a macro, the macro must produce the documentation as part of its expansion
+
+warning: variable `UNROLLED_INPUT_CHUNK_SIZE` should have a snake case name
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:265:9
+    |
+265 |     let UNROLLED_INPUT_CHUNK_SIZE: usize = 32;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `unrolled_input_chunk_size`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: variable `UNROLLED_OUTPUT_CHUNK_SIZE` should have a snake case name
+   --> /fastdata/v-boxiuli/noah/exp/tsE/task/verification/src/engine/general_purpose/decode.rs:266:9
+    |
+266 |     let UNROLLED_OUTPUT_CHUNK_SIZE: usize = UNROLLED_INPUT_CHUNK_SIZE / 4 * 3;
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `unrolled_output_chunk_size`
+
+warning: 18 warnings emitted
+
+completed: exit=0 wall=12.621s
+result: /fastdata/v-boxiuli/noah/exp/tsE/task/verification/target/verus-validation/runs/20261104T101505.416099Z-1281/result.json
+
+exit=0

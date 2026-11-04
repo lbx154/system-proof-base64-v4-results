@@ -1,4 +1,4 @@
-# base64-v4 审阅包：A 组与 C 组
+# base64-v4 审阅包：A、C、E 组
 
 > 网页版（全部材料全文、可折叠）：https://lbx154.github.io/system-proof-base64-v4-results/
 
@@ -99,3 +99,11 @@ verus-run verify $C/verification --preset standard     # 期望：172 verified, 
   - `trust/`：Verus 补丁、vstd 增补、改写和对应关系的论证、生命周期范围、T80 交接说明、工具链身份
   - `operator/`：操作员消息和各时间点
   - `project.json`、`events.jsonl`、`usage.jsonl`
+
+## E 组（最新）
+
+- Argus 最新 ts-core 加技能包 0.2.1（后半段换成 0.2.3），工作目录不手动准备，开头就允许不改行为的改写。
+- 原地审计重放 **179 verified, 0 errors**，我独立重放结果相同。实际干活约 2.5 小时，花费 0.09，33 个任务。
+- Verus 只改了一处：28 行的前端补丁（）。可信基为直接 10 组、剩余 2 组。
+- 结论带前提 B：调用方的  和输入对象的  正常执行完。原始 API 的  panic 反例保留在报告里。
+- 材料在 ：报告、规约与证明、源码差异、补丁与评估、两份重放日志、操作员消息、完整记录。

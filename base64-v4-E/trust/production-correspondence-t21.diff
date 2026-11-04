@@ -1,0 +1,3113 @@
+diff --git a/src/alphabet.rs b/src/alphabet.rs
+index cc7d8d1..88f072d 100644
+--- a/src/alphabet.rs
++++ b/src/alphabet.rs
+@@ -1,14 +1,20 @@
+ //! Provides [Alphabet] and constants for alphabets commonly used in the wild.
+ 
+ use core::{array, convert, fmt};
++#[allow(unused_imports)]
++use vstd::prelude::*;
++use vstd::string::StringSliceAdditionalSpecFns;
+ #[cfg(any(feature = "std", test))]
+ use std::error;
+ 
+ /// Unsurprisingly, there are 64 symbols in a Base64 alphabet.
+-const ALPHABET_LEN: usize = 64;
++vstd::prelude::verus! { const ALPHABET_LEN: usize = 64; }
+ 
+ /// Pad symbol for non-weird alphabets.
+-pub(crate) const PADDING_SYMBOL: Symbol = Symbol(b'=');
++vstd::prelude::verus! { pub(crate) exec const PADDING_SYMBOL: Symbol 
++ ensures PADDING_SYMBOL.byte() == 61u8
++ { Symbol(b'=') }
++}
+ 
+ /// An alphabet defines the 64 ASCII characters (symbols) used for base64.
+ ///
+@@ -52,6 +58,7 @@ pub(crate) const PADDING_SYMBOL: Symbol = Symbol(b'=');
+ /// );
+ /// ```
+ #[derive(Clone, Eq, PartialEq)]
++#[verifier::verify]
+ pub struct Alphabet {
+     /// All bytes are valid symbols, but left as u8 to allow `.as_str()` to work.
+     pub(crate) symbols: [u8; ALPHABET_LEN],
+@@ -59,22 +66,6 @@ pub struct Alphabet {
+ }
+ 
+ impl Alphabet {
+-    /// Performs no checks so that it can be const.
+-    /// Used only for known-valid strings.
+-    const fn from_str_unchecked(alphabet: &str, padding: Symbol) -> Self {
+-        let mut symbols = [0_u8; ALPHABET_LEN];
+-        let source_bytes = alphabet.as_bytes();
+-
+-        // a way to copy that's allowed in const fn
+-        let mut index = 0;
+-        while index < ALPHABET_LEN {
+-            symbols[index] = source_bytes[index];
+-            index += 1;
+-        }
+-
+-        Self { symbols, padding }
+-    }
+-
+     /// Create an `Alphabet` from a string of 64 unique printable ASCII bytes with `=` as the
+     /// padding symbol.
+     ///
+@@ -168,6 +159,7 @@ impl fmt::Debug for Alphabet {
+ /// This doesn't mean that a particular symbol is used in any particular alphabet, just that it
+ /// could be used in one.
+ #[derive(Clone, Copy, PartialEq, Eq)]
++#[verifier::verify]
+ pub struct Symbol(u8);
+ 
+ impl Symbol {
+@@ -181,6 +173,7 @@ impl Symbol {
+     }
+ 
+     /// Returns the symbol as an ASCII byte.
++    #[verus_spec(result => ensures result == self.byte())]
+     pub const fn as_u8(&self) -> u8 {
+         self.0
+     }
+@@ -248,10 +241,24 @@ impl error::Error for ParseAlphabetError {}
+ /// The standard alphabet (with `+` and `/`) specified in [RFC 4648][].
+ ///
+ /// [RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648#section-4
+-pub const STANDARD: Alphabet = Alphabet::from_str_unchecked(
+-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",
+-    PADDING_SYMBOL,
+-);
++vstd::prelude::verus! {
++/// The canonical STANDARD initializer, with checked representation guarantees.
++pub exec const STANDARD: Alphabet 
++ ensures STANDARD.bytes() == "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".spec_bytes() && STANDARD.pad().byte() == 61u8
++    && STANDARD.bytes() == Seq::new(64, |i: int| crate::round_trip_spec::standard_symbol(i as nat))
++    && crate::engine::general_purpose::distinct(STANDARD.bytes())
++ {
++    proof {
++        reveal_strlit("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
++        broadcast use vstd::string::group_string_axioms;
++        vstd::string::is_ascii_spec_bytes("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
++    }
++    let result = Alphabet::from_str_unchecked(
++        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/", PADDING_SYMBOL);
++    proof { standard_correspondence(&result); }
++    result
++ }
++}
+ 
+ /// The URL-safe alphabet (with `-` and `_`) specified in [RFC 4648][].
+ ///
+@@ -402,3 +409,66 @@ mod tests {
+         );
+     }
+ }
++
++vstd::prelude::verus! {
++impl Symbol {
++    /// Byte observation used by the selected engine representation.
++    pub closed spec fn byte(&self) -> u8 { self.0 }
++}
++}
++
++vstd::prelude::verus! {
++impl Alphabet {
++    /// Alphabet byte observation.
++    pub closed spec fn bytes(&self) -> Seq<u8> { self.symbols@ }
++    /// Alphabet padding observation.
++    pub closed spec fn pad(&self) -> Symbol { self.padding }
++    pub(crate) proof fn representation(&self)
++        ensures self.bytes() == self.symbols@, self.pad() == self.padding,
++    {}
++    /// Performs no checks so that it can be const; used only for known-valid strings.
++    const fn from_str_unchecked(alphabet: &str, padding: Symbol) -> (result: Self)
++
++        requires alphabet.spec_bytes().len() == 64,
++        ensures result.symbols@ == alphabet.spec_bytes(), result.padding == padding,
++    
++    {
++        let mut symbols = [0_u8; ALPHABET_LEN];
++        let source_bytes = alphabet.as_bytes();
++
++        // a way to copy that's allowed in const fn
++        let mut index = 0;
++        while index < ALPHABET_LEN
++            invariant index <= 64, source_bytes@.len() == 64, source_bytes@ == alphabet.spec_bytes(),
++                forall|j: int| 0 <= j < index ==> symbols@[j] == alphabet.spec_bytes()[j],
++            decreases 64 - index,
++        {
++            symbols[index] = source_bytes[index];
++            index += 1;
++        }
++
++        Self { symbols, padding }
++    }
++    }
++}
++
++verus! {
++/// Connect the actual STANDARD string bytes to the canonical symbol formula.
++    pub proof fn standard_correspondence(alphabet: &Alphabet)
++    requires alphabet.bytes() == "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".spec_bytes(),
++    ensures alphabet.bytes() == Seq::new(64, |i: int| crate::round_trip_spec::standard_symbol(i as nat)),
++        crate::engine::general_purpose::distinct(alphabet.bytes()),
++
++{
++    let literal = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
++    reveal_strlit("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
++    broadcast use vstd::string::group_string_axioms;
++    assert forall|i: int| 0 <= i < 64 implies
++        literal.spec_bytes()[i] == crate::round_trip_spec::standard_symbol(i as nat) by {
++        vstd::string::is_ascii_spec_bytes(literal);
++    }
++    assert(alphabet.bytes() =~= Seq::new(64, |i: int| crate::round_trip_spec::standard_symbol(i as nat)));
++    assert forall|i: int, j: int| #![trigger crate::round_trip_spec::standard_symbol(i as nat), crate::round_trip_spec::standard_symbol(j as nat)] 0 <= i < 64 && 0 <= j < 64 && i != j implies
++        crate::round_trip_spec::standard_symbol(i as nat) != crate::round_trip_spec::standard_symbol(j as nat) by {}
++}
++}
+diff --git a/src/as_ref_spec.rs b/src/as_ref_spec.rs
+new file mode 100644
+index 0000000..24e59a2
+--- /dev/null
++++ b/src/as_ref_spec.rs
+@@ -0,0 +1,32 @@
++//! Per-invocation standard-library conversion interfaces.
++#![allow(missing_docs)]
++use vstd::prelude::*;
++verus! {
++#[verifier::external_trait_specification]
++#[verifier::external_trait_extension(AsRefSpec via AsRefSpecImpl)]
++pub trait ExAsRef<T: core::marker::PointeeSized>: core::marker::PointeeSized {
++    type ExternalTraitSpecificationFor: core::convert::AsRef<T>;
++    spec fn as_ref_post(&self, ret: &T) -> bool;
++    fn as_ref(&self) -> (ret: &T)
++        ensures self.as_ref_post(ret);
++}
++impl<T> AsRefSpecImpl<[T]> for [T] {
++    open spec fn as_ref_post(&self, ret: &[T]) -> bool { ret@ == self@ }
++}
++impl<T: core::marker::PointeeSized, U: core::marker::PointeeSized> AsRefSpecImpl<U> for &T
++    where T: core::convert::AsRef<U>
++{
++    open spec fn as_ref_post(&self, ret: &U) -> bool { AsRefSpec::as_ref_post(*self, ret) }
++}
++pub open spec fn returned_bytes<T: AsRef<[u8]>>(input: &T, bytes: Seq<u8>) -> bool {
++    exists|returned: &[u8]| returned@ == bytes && AsRefSpec::as_ref_post(input, returned)
++}
++}
++
++verus! {
++/// Rust-valid byte slices have byte extent at most isize::MAX (environment boundary).
++#[verifier::external_body]
++pub proof fn byte_slice_valid(input: &[u8])
++    ensures crate::round_trip_spec::represented(input@),
++{}
++}
+diff --git a/src/decode.rs b/src/decode.rs
+index b76d757..04871fa 100644
+--- a/src/decode.rs
++++ b/src/decode.rs
+@@ -1,3 +1,5 @@
++#[allow(unused_imports)]
++use vstd::prelude::*;
+ use crate::engine::{general_purpose::STANDARD, DecodeEstimate, Engine};
+ #[cfg(any(feature = "alloc", test))]
+ use alloc::vec::Vec;
+@@ -7,6 +9,7 @@ use std::error;
+ 
+ /// Errors that can occur while decoding.
+ #[derive(Clone, PartialEq, Eq)]
++#[verifier::verify]
+ pub enum DecodeError {
+     /// An invalid byte was found in the input. The offset and offending byte are provided.
+     ///
+@@ -88,6 +91,7 @@ impl error::Error for DecodeError {}
+ 
+ /// Errors that can occur while decoding into a slice.
+ #[derive(Clone, Debug, PartialEq, Eq)]
++#[verifier::verify]
+ pub enum DecodeSliceError {
+     /// A [`DecodeError`] occurred
+     DecodeError(DecodeError),
+@@ -114,12 +118,22 @@ impl error::Error for DecodeSliceError {
+     }
+ }
+ 
++verus! {
++impl vstd::std_specs::convert::FromSpecImpl<DecodeError> for DecodeSliceError {
++    open spec fn obeys_from_spec() -> bool { true }
++    open spec fn from_spec(e: DecodeError) -> Self { DecodeSliceError::DecodeError(e) }
++}
++#[verifier::verify]
+ impl From<DecodeError> for DecodeSliceError {
+-    fn from(e: DecodeError) -> Self {
++    fn from(e: DecodeError) -> (result: Self)
++        ensures result == DecodeSliceError::DecodeError(e),
++    {
+         DecodeSliceError::DecodeError(e)
+     }
+ }
+ 
++}
++
+ /// Decode base64 using the [`STANDARD` engine](STANDARD).
+ ///
+ /// See [`Engine::decode`].
+@@ -186,6 +200,9 @@ pub fn decode_engine_slice<E: Engine, T: AsRef<[u8]>>(
+ /// assert_eq!(6, decoded_len_estimate(5));
+ /// ```
+ #[must_use]
++#[vstd::prelude::verus_spec(result =>
++    ensures result as nat == crate::round_trip_spec::decoded_estimate(encoded_len as nat),
++)]
+ pub fn decoded_len_estimate(encoded_len: usize) -> usize {
+     STANDARD
+         .internal_decoded_len_estimate(encoded_len)
+diff --git a/src/encode.rs b/src/encode.rs
+index c20d3fd..7af003d 100644
+--- a/src/encode.rs
++++ b/src/encode.rs
+@@ -1,3 +1,5 @@
++#[allow(unused_imports)]
++use vstd::prelude::*;
+ use crate::alphabet::Symbol;
+ #[cfg(any(feature = "alloc", test))]
+ use crate::engine::general_purpose::STANDARD;
+@@ -65,6 +67,13 @@ pub fn encode_engine_slice<E: Engine, T: AsRef<[u8]>>(
+ /// `output` must be of size `encoded_size`.
+ ///
+ /// All bytes in `output` will be written to since it is exactly the size of the output.
++#[verifier::verify]
++#[verifier::external_body]
++#[verus_spec(
++    ensures engine.is_standard() && crate::round_trip_spec::encode_requires(input@, old(output)@)
++        && expected_encoded_size == crate::round_trip_spec::encoded_size(input@.len()) ==>
++        crate::round_trip_spec::encode_post(input@, input@, old(output)@, final(output)@, expected_encoded_size as nat),
++)]
+ pub(crate) fn encode_with_padding<E: Engine + ?Sized>(
+     input: &[u8],
+     output: &mut [u8],
+@@ -98,6 +107,14 @@ pub(crate) fn encode_with_padding<E: Engine + ?Sized>(
+ /// Returns `None` if the encoded length can't be represented in `usize`. This will happen for
+ /// input lengths in approximately the top quarter of the range of `usize`.
+ #[must_use]
++#[vstd::prelude::verus_spec(result =>
++    ensures
++        bytes_len <= isize::MAX as usize ==> result.is_some(),
++        padding && bytes_len <= isize::MAX as usize ==>
++            result == Some(crate::round_trip_spec::encoded_size(bytes_len as nat) as usize),
++        padding && crate::round_trip_spec::supported(bytes_len as nat) ==>
++            result == Some(crate::round_trip_spec::encoded_size(bytes_len as nat) as usize),
++)]
+ pub const fn encoded_len(bytes_len: usize, padding: bool) -> Option<usize> {
+     let rem = bytes_len % 3;
+ 
+@@ -133,20 +150,35 @@ pub const fn encoded_len(bytes_len: usize, padding: bool) -> Option<usize> {
+ /// `output` is the slice where padding should be written, of length at least 2.
+ ///
+ /// Returns the number of padding bytes written.
+-pub(crate) fn add_padding(unpadded_output_len: usize, padding: Symbol, output: &mut [u8]) -> usize {
++verus! {
++/// Write precisely the computed padding prefix, preserving the remaining slice.
++pub(crate) fn add_padding(unpadded_output_len: usize, padding: Symbol, output: &mut [u8]) -> (result: usize)
++    requires old(output)@.len() >= (4 - (unpadded_output_len % 4)) % 4,
++    ensures
++        result == (4 - (unpadded_output_len % 4)) % 4,
++        final(output)@.len() == old(output)@.len(),
++        forall|j: int| 0 <= j < result ==> final(output)@[j] == padding.byte(),
++        forall|j: int| result <= j < final(output)@.len() ==> final(output)@[j] == old(output)@[j],
++{
+     let pad_bytes = (4 - (unpadded_output_len % 4)) % 4;
+-    // for just a couple bytes, this has better performance than using
+-    // .fill(), or iterating over mutable refs, which call memset()
++    let ghost before = output@;
+     #[allow(clippy::needless_range_loop)]
+-    for i in 0..pad_bytes {
++    for i in 0..pad_bytes
++        invariant
++            output@.len() == before.len(),
++            pad_bytes <= output@.len(),
++            forall|j: int| 0 <= j < i ==> output@[j] == padding.byte(),
++            forall|j: int| i <= j < output@.len() ==> output@[j] == before[j],
++    {
+         output[i] = padding.as_u8();
+     }
+-
+     pad_bytes
+ }
++}
+ 
+ /// Errors that can occur while encoding into a slice.
+ #[derive(Clone, Debug, PartialEq, Eq)]
++#[verifier::verify]
+ pub enum EncodeSliceError {
+     /// The provided slice is too small.
+     OutputSliceTooSmall,
+diff --git a/src/encode_bridge.rs b/src/encode_bridge.rs
+new file mode 100644
+index 0000000..c3750b3
+--- /dev/null
++++ b/src/encode_bridge.rs
+@@ -0,0 +1,48 @@
++//! Unpadded-size and padding composition facts for the actual encode wrapper.
++use vstd::prelude::*;
++use crate::round_trip_spec::*;
++verus! {
++/// Exact scalar encoder output length before padding.
++pub open spec fn raw_size(n: nat) -> nat {
++    4 * (n / 3) + if n % 3 == 0 { 0nat } else { n % 3 + 1 }
++}
++/// Arithmetic connecting the unpadded codec to the existing padded vocabulary.
++pub proof fn raw_capacity(n: nat)
++    ensures raw_size(n) <= encoded_size(n),
++        raw_size(n) + (4 - raw_size(n) % 4) % 4 == encoded_size(n),
++{
++    assert(n % 3 < 3) by (nonlinear_arith);
++    assert((4 * (n / 3)) % 4 == 0) by (nonlinear_arith);
++    assert(raw_size(n) % 4 == if n % 3 == 0 { 0nat } else { n % 3 + 1 }) by (nonlinear_arith);
++}
++/// Canonical trailing bytes after the raw output are precisely ASCII '='.
++pub proof fn padding_is_canonical(x: Seq<u8>)
++    ensures forall|j: int| raw_size(x.len()) <= j < encoded_size(x.len()) ==>
++        standard_encoding(x)[j] == 61u8,
++{
++    raw_capacity(x.len());
++    assert forall|j: int| raw_size(x.len()) <= j < encoded_size(x.len()) implies
++        standard_encoding(x)[j] == 61u8 by {
++        let n = x.len();
++        assert(n % 3 < 3) by (nonlinear_arith);
++        assert(n % 3 != 0);
++        assert(4 * (n / 3) + n % 3 + 1 <= j < 4 * (n / 3) + 4);
++        assert(j / 4 == n / 3) by (nonlinear_arith)
++            requires 4 * (n / 3) + n % 3 + 1 <= j < 4 * (n / 3) + 4, n % 3 < 3;
++
++        assert(j == 4 * (j / 4) + j % 4) by (nonlinear_arith);
++        assert(j % 4 >= n % 3 + 1) by (nonlinear_arith)
++            requires j == 4 * (j / 4) + j % 4, j / 4 == n / 3,
++                4 * (n / 3) + n % 3 + 1 <= j;
++
++        assert(n == 3 * (n / 3) + n % 3) by (nonlinear_arith);
++        assert(3 * (j / 4) + 1 >= n || j % 4 == 3) by (nonlinear_arith)
++            requires j / 4 == n / 3, n == 3 * (n / 3) + n % 3,
++                n % 3 < 3, j % 4 >= n % 3 + 1, j % 4 < 4;
++
++        assert(3 * (j / 4) + 2 >= n) by (nonlinear_arith)
++            requires j / 4 == n / 3, n == 3 * (n / 3) + n % 3, n % 3 < 3;
++
++    }
++}
++}
+diff --git a/src/engine/general_purpose/decode.rs b/src/engine/general_purpose/decode.rs
+index eb45cfc..ab07484 100644
+--- a/src/engine/general_purpose/decode.rs
++++ b/src/engine/general_purpose/decode.rs
+@@ -1,3 +1,5 @@
++#[allow(unused_imports)]
++use vstd::prelude::*;
+ use crate::alphabet::Symbol;
+ use crate::{
+     engine::{general_purpose::INVALID_VALUE, DecodeEstimate, DecodeMetadata, DecodePaddingMode},
+@@ -5,28 +7,67 @@ use crate::{
+ };
+ 
+ #[doc(hidden)]
++#[verifier::verify]
+ pub struct GeneralPurposeEstimate {
+     /// input len % 4
+     rem: usize,
+     conservative_decoded_len: usize,
+ }
+ 
++verus! {
+ impl GeneralPurposeEstimate {
+-    pub(crate) fn new(encoded_len: usize) -> Self {
++    pub(crate) closed spec fn remainder(&self) -> usize { self.rem }
++    pub(crate) proof fn compatible_facts(&self, input_len: nat)
++        requires self.compatible_with(input_len),
++        ensures self.remainder() as nat == input_len % 4,
++            self.capacity() as nat == crate::round_trip_spec::decoded_estimate(input_len),
++    {}
++    /// Conservative capacity observation for the public sizing helper.
++    pub closed spec fn capacity(&self) -> usize { self.conservative_decoded_len }
++    pub(crate) fn new(encoded_len: usize) -> (result: Self)
++        ensures
++            result.compatible_with(encoded_len as nat),
++            result.remainder() == encoded_len % 4,
++            result.capacity() as nat == crate::round_trip_spec::decoded_estimate(encoded_len as nat),
++            result.estimated_len() == crate::round_trip_spec::decoded_estimate(encoded_len as nat),
++    {
+         let rem = encoded_len % 4;
+         Self {
+             rem,
+-            conservative_decoded_len: (encoded_len / 4 + usize::from(rem > 0)) * 3,
++            conservative_decoded_len: (encoded_len / 4 + if rem > 0 { 1usize } else { 0usize }) * 3,
+         }
+     }
+ }
+ 
++}
++
++verus! {
++#[verifier::verify]
+ impl DecodeEstimate for GeneralPurposeEstimate {
++    closed spec fn estimated_len(&self) -> nat { self.conservative_decoded_len as nat }
++    closed spec fn compatible_with(&self, input_len: nat) -> bool {
++        self.rem as nat == input_len % 4
++        && self.conservative_decoded_len as nat == crate::round_trip_spec::decoded_estimate(input_len)
++    }
++    #[verus_spec(result => ensures result == self.capacity())]
+     fn decoded_len_estimate(&self) -> usize {
+         self.conservative_decoded_len
+     }
+ }
+ 
++}
++
++verus! {
++/// Canonical success domain, separate from unrestricted native dispatch safety.
++pub(crate) open spec fn canonical_helper_use(x: Seq<u8>, input: Seq<u8>, output: Seq<u8>,
++    table: Seq<u8>, padding: u8, mode: DecodePaddingMode) -> bool {
++    input == crate::round_trip_spec::standard_encoding(x)
++    && output.len() >= crate::round_trip_spec::decoded_estimate(input.len())
++    && padding == 61 && mode == DecodePaddingMode::RequireCanonical
++    && forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8
++}
++}
++
+ /// Helper to avoid duplicating `num_chunks` calculation, which is costly on short inputs.
+ /// Returns the decode metadata, or an error.
+ // We're on the fragile edge of compiler heuristics here. If this is not inlined, slow. If this is
+@@ -34,6 +75,23 @@ impl DecodeEstimate for GeneralPurposeEstimate {
+ // but this is fragile and the best setting changes with only minor code modifications.
+ #[allow(clippy::too_many_arguments)]
+ #[inline]
++verus! {
++#[verifier::verify]
++#[verus_spec(result =>
++    with Ghost(x): Ghost<Seq<u8>>,
++    requires estimate.remainder() == input@.len() % 4,
++        forall|i: &[u8], n: usize, o: &mut [u8]| #[trigger] call_requires(simd_prefix,(i,n,o)),
++        forall|i: &[u8], n: usize, o: &mut [u8], r: (usize,usize)| #[trigger] call_ensures(simd_prefix,(i,n,o),r) ==> r == (0usize,0usize) && final(o)@ == o@,
++    ensures canonical_helper_use(x,input@,old(output)@,decode_table@,padding.byte(),padding_mode) ==> match result {
++        Ok(m) => m.decoded_len as nat == x.len()
++            && crate::round_trip_spec::suffix_unchanged(old(output)@, final(output)@, x.len())
++            && final(output)@.subrange(0,x.len() as int) == x
++            && m.padding_offset == if 0 < super::decode_suffix::terminal_tail(x).len() < 3 {
++                Some((super::decode_suffix::terminal_input_index(x) + super::decode_suffix::symbol_count(super::decode_suffix::terminal_tail(x))) as usize)
++            } else { None },
++        Err(_) => false,
++    },
++)]
+ pub(crate) fn decode_helper(
+     input: &[u8],
+     estimate: &GeneralPurposeEstimate,
+@@ -44,8 +102,19 @@ pub(crate) fn decode_helper(
+     padding_mode: DecodePaddingMode,
+     simd_prefix: impl FnOnce(&[u8], usize, &mut [u8]) -> (usize, usize),
+ ) -> Result<DecodeMetadata, DecodeSliceError> {
+-    let input_complete_nonterminal_quads_len =
+-        complete_quads_len(input, estimate.rem, output.len(), decode_table, padding)?;
++    let ghost initial_output = output@;
++    let ghost canonical = canonical_helper_use(x,input@,initial_output,decode_table@,padding.byte(),padding_mode);
++    proof {
++      if canonical {
++        super::decode_suffix::canonical_suffix_image(x);
++        if x.len() % 3 == 0 {} else if x.len() % 3 == 1 {} else {}
++        assert(x.len() <= crate::round_trip_spec::decoded_estimate(input@.len()));
++      }
++    }
++    let input_complete_nonterminal_quads_len = {
++        proof_with! { Ghost(x) }
++        complete_quads_len(input, estimate.rem, output.len(), decode_table, padding)?
++    };
+ 
+     let output_complete_quad_len = input_complete_nonterminal_quads_len / 4 * 3;
+ 
+@@ -68,6 +137,16 @@ pub(crate) fn decode_helper(
+         "prefix output must match consumed input"
+     );
+ 
++    proof {
++      if canonical {
++        super::decode_suffix::canonical_suffix_image(x);
++        assert(input_complete_nonterminal_quads_len as nat == super::decode_suffix::terminal_input_index(x));
++        assert(input_complete_nonterminal_quads_len % 4 == 0);
++        reveal(decoder_image);
++        assert(canonical_quads_use(x,input@,decode_table@,input_complete_nonterminal_quads_len as nat));
++      }
++    }
++    proof_with! { Ghost(x) }
+     decode_complete_quads(
+         input,
+         input_index,
+@@ -77,7 +156,10 @@ pub(crate) fn decode_helper(
+         output_index,
+     )?;
+ 
+-    super::decode_suffix::decode_suffix(
++    let ghost prefix_output = output@;
++    let ghost t = if canonical { super::decode_suffix::terminal_tail(x) } else { Seq::<u8>::empty() };
++    let result = { proof_with! { Ghost(t) }
++        super::decode_suffix::decode_suffix(
+         input,
+         input_complete_nonterminal_quads_len,
+         output,
+@@ -86,13 +168,80 @@ pub(crate) fn decode_helper(
+         decode_allow_trailing_bits,
+         padding,
+         padding_mode,
+-    )
++    ) };
++    proof {
++      if canonical {
++        assert forall|j: int| 0 <= j < x.len() implies output@[j] == x[j] by {
++            if j < output_complete_quad_len {
++                assert(output@[j] == prefix_output[j]);
++                assert(prefix_output[j] == x[j]);
++            } else {
++                let t = super::decode_suffix::terminal_tail(x);
++                assert(t[j-output_complete_quad_len as int] == x[j]);
++                assert(output@[j] == t[j-output_complete_quad_len as int]);
++            }
++        }
++        assert(output@.subrange(0,x.len() as int) =~= x);
++      }
++    }
++    result
++}
++
+ }
+ 
+ /// Decode the complete non-terminal quads in `input[input_index_start..input_index_end]` (both
+ /// bounds multiples of 4), writing to `output` starting at `output_index_start`, which must equal
+ /// `input_index_start / 4 * 3`. Error offsets are reported in absolute input coordinates.
+-#[inline]
++verus! {
++#[verifier::opaque]
++pub(crate) open spec fn decoder_image(x: Seq<u8>, e: Seq<u8>) -> bool {
++    e == crate::round_trip_spec::standard_encoding(x)
++}
++pub(crate) proof fn image_window(x: Seq<u8>, e: Seq<u8>, table: Seq<u8>, ii: nat, quads: nat)
++    requires decoder_image(x,e), ii % 4 == 0, 1 <= quads <= 2,
++        ii + 4 * quads <= e.len(), 3 * (ii / 4 + quads) <= x.len(),
++        table.len() == 256,
++        forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8,
++    ensures
++        forall|i: int| 0 <= i < 4*quads ==> #[trigger] table[e[ii as int+i] as int] < 64,
++        forall|j: int| 0 <= j < 3*quads ==> #[trigger] chunk_byte(e.subrange(ii as int,(ii+4*quads) as int),table,j) == x[(3*(ii/4)) as int+j],
++{
++    reveal(decoder_image);
++    canonical_chunk(x,table,ii/4,quads);
++    assert(4*(ii/4) == ii) by(nonlinear_arith) requires ii % 4 == 0;
++    assert(4*(ii/4+quads) == ii+4*quads) by(nonlinear_arith) requires ii % 4 == 0;
++}
++pub(crate) proof fn image_window_byte(x: Seq<u8>, e: Seq<u8>, table: Seq<u8>, ii: nat, quads: nat, j: int)
++    requires decoder_image(x,e), ii % 4 == 0, 1 <= quads <= 2,
++        ii + 4 * quads <= e.len(), 3 * (ii / 4 + quads) <= x.len(),
++        table.len() == 256, 0 <= j < 3 * quads,
++        forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8,
++    ensures chunk_byte(e.subrange(ii as int,(ii+4*quads) as int),table,j) == x[(3*(ii/4)) as int+j],
++{
++    image_window(x,e,table,ii,quads);
++}
++
++}
++
++verus! {
++pub(crate) open spec fn canonical_quads_use(x: Seq<u8>, input: Seq<u8>, table: Seq<u8>, end: nat) -> bool {
++    decoder_image(x,input)
++        && end <= crate::engine::general_purpose::decode_suffix::terminal_input_index(x)
++        && forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8
++}
++#[verifier::verify]
++#[verus_spec(result =>
++    with Ghost(x): Ghost<Seq<u8>>,
++    requires input_index_start <= input_index_end <= input.len(),
++        input_index_start % 4 == 0, input_index_end % 4 == 0,
++        output_index_start == input_index_start / 4 * 3,
++        old(output)@.len() >= input_index_end / 4 * 3,
++    ensures final(output)@.len() == old(output)@.len(),
++        forall|j: int| 0 <= j < old(output)@.len() && (j < output_index_start || j >= input_index_end / 4 * 3) ==> final(output)@[j] == old(output)@[j],
++        canonical_quads_use(x,input@,decode_table@,input_index_end as nat) ==>
++            (result == Ok::<(), DecodeSliceError>(()) &&
++            forall|j: int| output_index_start <= j < input_index_end / 4 * 3 ==> final(output)@[j] == x[j]),
++)]
+ fn decode_complete_quads(
+     input: &[u8],
+     input_index_start: usize,
+@@ -101,6 +250,8 @@ fn decode_complete_quads(
+     output: &mut [u8],
+     output_index_start: usize,
+ ) -> Result<(), DecodeSliceError> {
++    hide(chunk_byte);
++    let ghost canonical = canonical_quads_use(x,input@,decode_table@,input_index_end as nat);
+     debug_assert!(
+         input_index_start % 4 == 0,
+         "quad start must be quad-aligned"
+@@ -111,20 +262,90 @@ fn decode_complete_quads(
+         "output start must match consumed input"
+     );
+ 
+-    const UNROLLED_INPUT_CHUNK_SIZE: usize = 32;
+-    const UNROLLED_OUTPUT_CHUNK_SIZE: usize = UNROLLED_INPUT_CHUNK_SIZE / 4 * 3;
++    let UNROLLED_INPUT_CHUNK_SIZE: usize = 32;
++    let UNROLLED_OUTPUT_CHUNK_SIZE: usize = UNROLLED_INPUT_CHUNK_SIZE / 4 * 3;
+ 
+     let quads_len = input_index_end - input_index_start;
+     let unrolled_loop_len = quads_len - quads_len % UNROLLED_INPUT_CHUNK_SIZE;
+     let input_unrolled_loop_end = input_index_start + unrolled_loop_len;
+ 
+-    // chunks of 32 bytes
+-    for (chunk_index, chunk) in input[input_index_start..input_unrolled_loop_end]
+-        .chunks_exact(UNROLLED_INPUT_CHUNK_SIZE)
+-        .enumerate()
++    proof {
++      if canonical {
++        reveal(canonical_quads_use);
++        reveal(decoder_image);
++        crate::engine::general_purpose::decode_suffix::canonical_suffix_image(x);
++        reveal(decoder_image);
++        assert(decoder_image(x,input@));
++    
++      }
++}
++    let ghost initial_output = output@;
++    let mut chunk_index: usize = 0;
++    while chunk_index < unrolled_loop_len / UNROLLED_INPUT_CHUNK_SIZE
++        invariant
++            canonical == canonical_quads_use(x,input@,decode_table@,input_index_end as nat),
++            canonical ==> decoder_image(x,input@),
++            input_index_start <= input_index_end,
++            input_index_end <= input@.len(),
++            canonical ==> input_index_end / 4 * 3 <= x.len(),
++            input_index_end / 4 * 3 <= output@.len(),
++            input_index_start % 4 == 0, input_index_end % 4 == 0,
++            canonical ==> input_index_end as nat <= crate::engine::general_purpose::decode_suffix::terminal_input_index(x),
++            output_index_start == input_index_start / 4 * 3,
++            output@.len() == initial_output.len(),
++            old(output)@ == initial_output,
++
++            canonical ==> (forall|v: nat| v < 64 ==> decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8),
++            UNROLLED_INPUT_CHUNK_SIZE == 32, UNROLLED_OUTPUT_CHUNK_SIZE == 24,
++            quads_len == input_index_end - input_index_start,
++            unrolled_loop_len == quads_len - quads_len % 32,
++            input_unrolled_loop_end == input_index_start + unrolled_loop_len,
++            chunk_index <= unrolled_loop_len / 32,
++            canonical ==> (forall|j: int| output_index_start <= j < output_index_start + chunk_index * 24 ==> output@[j] == x[j]),
++            forall|j: int| 0 <= j < output@.len() && (j < output_index_start || j >= output_index_start + chunk_index * 24) ==> output@[j] == initial_output[j],
++        decreases unrolled_loop_len / 32 - chunk_index,
+     {
++        let chunk = &input[input_index_start + chunk_index * 32..input_index_start + (chunk_index + 1) * 32];
+         let input_index = input_index_start + chunk_index * UNROLLED_INPUT_CHUNK_SIZE;
+         let output_base = output_index_start + chunk_index * UNROLLED_OUTPUT_CHUNK_SIZE;
++        proof {
++      if canonical {
++
++            image_window(x,input@,decode_table@,input_index as nat,2);
++            image_window(x,input@,decode_table@,(input_index+8) as nat,2);
++            image_window(x,input@,decode_table@,(input_index+16) as nat,2);
++            image_window(x,input@,decode_table@,(input_index+24) as nat,2);
++            assert(chunk@.subrange(0,8) =~= input@.subrange(input_index as int,(input_index+8) as int));
++            assert(chunk@.subrange(8,16) =~= input@.subrange((input_index+8) as int,(input_index+16) as int));
++            assert(chunk@.subrange(16,24) =~= input@.subrange((input_index+16) as int,(input_index+24) as int));
++            assert(chunk@.subrange(24,32) =~= input@.subrange((input_index+24) as int,(input_index+32) as int));
++            assert forall|i: int| 0 <= i < 32 implies decode_table@[chunk@[i] as int] < 64 by {
++                if i < 8 { assert(decode_table@[input@[input_index as int+i] as int] < 64); }
++                else if i < 16 { assert(decode_table@[input@[(input_index+8) as int+(i-8)] as int] < 64); }
++                else if i < 24 { assert(decode_table@[input@[(input_index+16) as int+(i-16)] as int] < 64); }
++                else { assert(decode_table@[input@[(input_index+24) as int+(i-24)] as int] < 64); }
++            }
++            assert(input_index / 4 * 3 == output_base);
++            assert forall|j: int| 0 <= j < 6 implies chunk_byte(chunk@.subrange(0,8),decode_table@,j) == x[output_base as int+j] by {
++                image_window_byte(x,input@,decode_table@,input_index as nat,2,j);
++                assert(chunk_byte(input@.subrange(input_index as int,(input_index+8) as int),decode_table@,j) == x[(3*(input_index/4)) as int+j]);
++            }
++            assert forall|j: int| 0 <= j < 6 implies chunk_byte(chunk@.subrange(8,16),decode_table@,j) == x[output_base as int+6+j] by {
++                image_window_byte(x,input@,decode_table@,(input_index+8) as nat,2,j);
++                assert(chunk_byte(input@.subrange((input_index+8) as int,(input_index+16) as int),decode_table@,j) == x[(3*((input_index+8)/4)) as int+j]);
++            }
++            assert forall|j: int| 0 <= j < 6 implies chunk_byte(chunk@.subrange(16,24),decode_table@,j) == x[output_base as int+12+j] by {
++                image_window_byte(x,input@,decode_table@,(input_index+16) as nat,2,j);
++                assert(chunk_byte(input@.subrange((input_index+16) as int,(input_index+24) as int),decode_table@,j) == x[(3*((input_index+16)/4)) as int+j]);
++            }
++            assert forall|j: int| 0 <= j < 6 implies chunk_byte(chunk@.subrange(24,32),decode_table@,j) == x[output_base as int+18+j] by {
++                image_window_byte(x,input@,decode_table@,(input_index+24) as nat,2,j);
++                assert(chunk_byte(input@.subrange((input_index+24) as int,(input_index+32) as int),decode_table@,j) == x[(3*((input_index+24)/4)) as int+j]);
++            }
++
++        
++      }
++}
+         let chunk_output = &mut output[output_base..output_base + UNROLLED_OUTPUT_CHUNK_SIZE];
+ 
+         decode_chunk_8(
+@@ -151,15 +372,64 @@ fn decode_complete_quads(
+             decode_table,
+             &mut chunk_output[18..24],
+         )?;
++        proof {
++      if canonical {
++
++            assert forall|j: int| 0 <= j < 24 implies chunk_output@[j] == x[output_base as int+j] by {
++                if j < 6 {} else if j < 12 {} else if j < 18 {} else {}
++            }
++        
++      }
++}
++        chunk_index += 1;
+     }
+ 
+     // remaining quads, except for the last possibly partial one, as it may have padding
+     let output_after_unroll_start = output_index_start + unrolled_loop_len / 4 * 3;
+-    for (chunk_index, chunk) in input[input_unrolled_loop_end..input_index_end]
+-        .chunks_exact(4)
+-        .enumerate()
++    let mut chunk_index: usize = 0;
++    while chunk_index < (input_index_end - input_unrolled_loop_end) / 4
++        invariant
++            canonical == canonical_quads_use(x,input@,decode_table@,input_index_end as nat),
++            canonical ==> decoder_image(x,input@),
++            input_index_start <= input_index_end,
++            input_index_end <= input@.len(),
++            canonical ==> input_index_end / 4 * 3 <= x.len(),
++            input_index_end / 4 * 3 <= output@.len(),
++            input_index_start % 4 == 0, input_index_end % 4 == 0,
++            canonical ==> input_index_end as nat <= crate::engine::general_purpose::decode_suffix::terminal_input_index(x),
++            output_index_start == input_index_start / 4 * 3,
++            output@.len() == initial_output.len(),
++            old(output)@ == initial_output,
++
++            canonical ==> (forall|v: nat| v < 64 ==> decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8),
++            quads_len == input_index_end - input_index_start,
++            unrolled_loop_len == quads_len - quads_len % 32,
++            input_unrolled_loop_end == input_index_start + unrolled_loop_len,
++            output_after_unroll_start == output_index_start + unrolled_loop_len / 4 * 3,
++            chunk_index <= (input_index_end - input_unrolled_loop_end) / 4,
++            canonical ==> (forall|j: int| output_index_start <= j < output_after_unroll_start + chunk_index * 3 ==> output@[j] == x[j]),
++            forall|j: int| 0 <= j < output@.len() && (j < output_index_start || j >= output_after_unroll_start + chunk_index * 3) ==> output@[j] == initial_output[j],
++        decreases (input_index_end - input_unrolled_loop_end) / 4 - chunk_index,
+     {
++        let chunk = &input[input_unrolled_loop_end + chunk_index * 4..input_unrolled_loop_end + (chunk_index + 1) * 4];
+         let output_base = output_after_unroll_start + chunk_index * 3;
++        proof {
++      if canonical {
++
++            image_window(x,input@,decode_table@,(input_unrolled_loop_end+chunk_index*4) as nat,1);
++            assert forall|i: int| 0 <= i < 4 implies decode_table@[chunk@[i] as int] < 64 by {
++                assert(decode_table@[input@[(input_unrolled_loop_end+chunk_index*4) as int+i] as int] < 64);
++            }
++            assert((input_unrolled_loop_end+chunk_index*4) / 4 * 3 == output_base);
++            assert forall|j: int| 0 <= j < 3 implies chunk_byte(chunk@,decode_table@,j) == x[output_base as int+j] by {
++                let ii = (input_unrolled_loop_end+chunk_index*4) as nat;
++                assert(chunk_byte(input@.subrange(ii as int,(ii+4) as int),decode_table@,j) == x[(3*(ii/4)) as int+j]);
++                assert(chunk@ =~= input@.subrange(ii as int, (ii+4) as int));
++            }
++
++        
++      }
++}
+         let chunk_output = &mut output[output_base..output_base + 3];
+ 
+         decode_chunk_4(
+@@ -168,11 +438,21 @@ fn decode_complete_quads(
+             decode_table,
+             chunk_output,
+         )?;
++        proof {
++      if canonical {
++
++            assert forall|j: int| 0 <= j < 3 implies chunk_output@[j] == x[output_base as int+j] by {}
++        
++      }
++}
++        chunk_index += 1;
+     }
+ 
+     Ok(())
+ }
+ 
++}
++
+ /// Returns the length of complete quads, except for the last one, even if it is complete.
+ ///
+ /// Returns an error if the output len is not big enough for decoding those complete quads, or if
+@@ -181,6 +461,34 @@ fn decode_complete_quads(
+ /// - `input` is the base64 input
+ /// - `input_len_rem` is input len % 4
+ /// - `output_len` is the length of the output slice
++verus! {
++pub(crate) open spec fn nonterminal_len(n: nat) -> nat {
++    if n == 0 { 0 } else { (((n - 1) / 4) * 4) as nat }
++}
++pub(crate) open spec fn invalid_last(input: Seq<u8>, table: Seq<u8>, pad: u8) -> bool {
++    input.len() % 4 == 1 && input[input.len() as int - 1] != pad
++        && table[input[input.len() as int - 1] as int] == 255u8
++}
++#[verifier::verify]
++#[verus_spec(result =>
++    with Ghost(x): Ghost<Seq<u8>>,
++    requires input_len_rem == input.len() % 4,
++    ensures
++        match result {
++            Ok(k) => k as nat == nonterminal_len(input.len() as nat)
++                && k % 4 == 0 && k <= input.len() && k / 4 * 3 <= output_len
++                && !invalid_last(input@,decode_table@,padding.byte())
++                && (input.len() == 0 || 1 <= input.len() - k <= 4),
++            Err(e) => if invalid_last(input@,decode_table@,padding.byte()) {
++                e == DecodeSliceError::DecodeError(DecodeError::InvalidByte((input.len() - 1) as usize, input@[input.len() as int - 1]))
++            } else {
++                e == DecodeSliceError::OutputSliceTooSmall && output_len < nonterminal_len(input.len() as nat) / 4 * 3
++            },
++        },
++        (input@ == crate::round_trip_spec::standard_encoding(x)
++            && output_len >= crate::round_trip_spec::decoded_estimate(input@.len())) ==>
++            result == Ok(crate::engine::general_purpose::decode_suffix::terminal_input_index(x) as usize),
++)]
+ pub(crate) fn complete_quads_len(
+     input: &[u8],
+     input_len_rem: usize,
+@@ -188,6 +496,11 @@ pub(crate) fn complete_quads_len(
+     decode_table: &[u8; 256],
+     padding: Symbol,
+ ) -> Result<usize, DecodeSliceError> {
++    proof {
++        if input@ == crate::round_trip_spec::standard_encoding(x) {
++            crate::engine::general_purpose::decode_suffix::canonical_suffix_image(x);
++        }
++    }
+     debug_assert!(input.len() % 4 == input_len_rem);
+ 
+     // detect a trailing invalid byte, like a newline, as a user convenience
+@@ -204,9 +517,9 @@ pub(crate) fn complete_quads_len(
+         .len()
+         .saturating_sub(input_len_rem)
+         // if rem was 0, subtract 4 to avoid padding
+-        .saturating_sub(usize::from(input_len_rem == 0) * 4);
++        .saturating_sub(if input_len_rem == 0 { 4usize } else { 0usize });
+     debug_assert!(
+-        input.is_empty() || (1..=4).contains(&(input.len() - input_complete_nonterminal_quads_len))
++        input.is_empty() || (1 <= input.len() - input_complete_nonterminal_quads_len && input.len() - input_complete_nonterminal_quads_len <= 4)
+     );
+ 
+     // check that everything except the last quad handled by decode_suffix will fit
+@@ -215,6 +528,78 @@ pub(crate) fn complete_quads_len(
+     };
+     Ok(input_complete_nonterminal_quads_len)
+ }
++}
++
++verus! {
++use crate::round_trip_spec::*;
++/// Checked arithmetic/bit-vector inversion of the canonical complete triple vocabulary.
++pub(crate) proof fn invert_triple(a: u8, b: u8, c: u8)
++    ensures
++        ((((a as nat / 4) as u8) << 2) | ((((a as nat % 4) * 16 + b as nat / 16) as u8) >> 4)) == a,
++        (((((a as nat % 4) * 16 + b as nat / 16) as u8) << 4) | ((((b as nat % 16) * 4 + c as nat / 64) as u8) >> 2)) == b,
++        (((((b as nat % 16) * 4 + c as nat / 64) as u8) << 6) | ((c as nat % 64) as u8)) == c,
++{
++    assert((((a / 4) << 2) | ((((a % 4) * 16 + b / 16) as u8) >> 4)) == a) by(bit_vector);
++    assert((((((a % 4) * 16 + b / 16) as u8) << 4) | ((((b % 16) * 4 + c / 64) as u8) >> 2)) == b) by(bit_vector);
++    assert((((((b % 16) * 4 + c / 64) as u8) << 6) | (c % 64)) == c) by(bit_vector);
++}
++
++/// Derives table legitimacy and recovered bytes for any complete encoder-image quad.
++pub(crate) proof fn canonical_quad(x: Seq<u8>, table: Seq<u8>, q: nat)
++    requires 3 * q + 3 <= x.len(), table.len() == 256,
++        forall|v: nat| v < 64 ==> table[standard_symbol(v) as int] == v as u8,
++    ensures
++        forall|i: int| 0 <= i < 4 ==> #[trigger] table[encoded_byte(x, 4 * q + i as nat) as int] < 64,
++        forall|j: int| 0 <= j < 3 ==> #[trigger] chunk_byte(standard_encoding(x).subrange((4 * q) as int, (4 * q + 4) as int), table, j) == x[(3 * q) as int + j],
++{
++    let a = x[(3 * q) as int];
++    let b = x[(3 * q + 1) as int];
++    let c = x[(3 * q + 2) as int];
++    invert_triple(a, b, c);
++    assert((4 * q) / 4 == q && (4 * q) % 4 == 0) by(nonlinear_arith);
++    assert((4 * q + 1) / 4 == q && (4 * q + 1) % 4 == 1) by(nonlinear_arith);
++    assert((4 * q + 2) / 4 == q && (4 * q + 2) % 4 == 2) by(nonlinear_arith);
++    assert((4 * q + 3) / 4 == q && (4 * q + 3) % 4 == 3) by(nonlinear_arith);
++    assert forall|i: int| 0 <= i < 4 implies #[trigger] table[encoded_byte(x, 4 * q + i as nat) as int] < 64 by {
++        if i == 0 {} else if i == 1 {} else if i == 2 {} else { assert(i == 3); }
++    }
++    assert forall|j: int| 0 <= j < 3 implies #[trigger] chunk_byte(standard_encoding(x).subrange((4 * q) as int, (4 * q + 4) as int), table, j) == x[(3 * q) as int + j] by {
++        if j == 0 {} else if j == 1 {} else { assert(j == 2); }
++    }
++}
++
++/// Consumer interface for either scalar chunk size; no implementation-readiness premise.
++pub(crate) proof fn canonical_chunk(x: Seq<u8>, table: Seq<u8>, q: nat, quads: nat)
++    requires 1 <= quads <= 2, 3 * (q + quads) <= x.len(), table.len() == 256,
++        forall|v: nat| v < 64 ==> table[standard_symbol(v) as int] == v as u8,
++    ensures
++        forall|i: int| 0 <= i < 4 * quads ==> #[trigger] table[standard_encoding(x)[(4 * q) as int + i] as int] < 64,
++        forall|j: int| 0 <= j < 3 * quads ==> #[trigger] chunk_byte(standard_encoding(x).subrange((4 * q) as int, (4 * (q + quads)) as int), table, j) == x[(3 * q) as int + j],
++{
++    canonical_quad(x, table, q);
++    if quads == 2 { canonical_quad(x, table, q + 1); }
++    assert forall|i: int| 0 <= i < 4 * quads implies #[trigger] table[standard_encoding(x)[(4 * q) as int + i] as int] < 64 by {
++        if i < 4 {} else { assert(0 <= i - 4 < 4); }
++    }
++    assert forall|j: int| 0 <= j < 3 * quads implies #[trigger] chunk_byte(standard_encoding(x).subrange((4 * q) as int, (4 * (q + quads)) as int), table, j) == x[(3 * q) as int + j] by {
++        if j < 3 {
++            assert(chunk_byte(standard_encoding(x).subrange((4 * q) as int, (4 * (q + quads)) as int), table, j) == chunk_byte(standard_encoding(x).subrange((4 * q) as int, (4 * q + 4) as int), table, j));
++        } else {
++            assert(3 <= j < 6);
++            assert(j / 3 == 1 && (j - 3) / 3 == 0 && j % 3 == (j - 3) % 3);
++            assert(chunk_byte(standard_encoding(x).subrange((4 * q) as int, (4 * (q + quads)) as int), table, j) == chunk_byte(standard_encoding(x).subrange((4 * (q + 1)) as int, (4 * (q + 1) + 4) as int), table, j - 3));
++        }
++    }
++}
++
++/// Value decoded from a complete quad of legitimate six-bit table entries.
++pub(crate) open spec fn chunk_byte(input: Seq<u8>, table: Seq<u8>, j: int) -> u8 {
++    let q = 4 * (j / 3);
++    if j % 3 == 0 { (table[input[q] as int] << 2) | (table[input[q + 1] as int] >> 4) }
++    else if j % 3 == 1 { (table[input[q + 1] as int] << 4) | (table[input[q + 2] as int] >> 2) }
++    else { (table[input[q + 2] as int] << 6) | table[input[q + 3] as int] }
++}
++}
+ 
+ /// Decode 8 bytes of input into 6 bytes of output.
+ ///
+@@ -224,6 +609,26 @@ pub(crate) fn complete_quads_len(
+ /// `decode_table` is the lookup table for the particular base64 alphabet.
+ /// `output` will have its first 6 bytes overwritten
+ // yes, really inline (worth 30-50% speedup)
++verus! {
++#[verifier::verify]
++#[verus_spec(result =>
++    requires input.len() >= 8,
++        (exists|i: int| 0 <= i < 8 && decode_table@[input@[i] as int] == 255u8)
++            || old(output).len() >= 6,
++        forall|i: int| 0 <= i < 8 && decode_table@[input@[i] as int] == 255u8
++            ==> index_at_start_of_input as int + i <= usize::MAX,
++    ensures
++        result.is_ok() <==> (forall|i: int| 0 <= i < 8 ==> decode_table@[input@[i] as int] != 255u8),
++        result.is_err() ==> final(output)@ == old(output)@,
++        result.is_err() ==> exists|i: int| 0 <= i < 8
++            && decode_table@[input@[i] as int] == 255u8
++            && (forall|k: int| 0 <= k < i ==> decode_table@[input@[k] as int] != 255u8)
++            && result == Err(DecodeError::InvalidByte((index_at_start_of_input as int + i) as usize, input@[i])),
++        (forall|i: int| 0 <= i < 8 ==> decode_table@[input@[i] as int] < 64) ==>
++            (result == Ok(()) && forall|j: int| 0 <= j < 6 ==> final(output)@[j] == chunk_byte(input@, decode_table@, j)),
++        final(output)@.len() == old(output)@.len(),
++        forall|i: int| 6 <= i < final(output)@.len() ==> final(output)@[i] == old(output)@[i],
++)]
+ #[inline(always)]
+ fn decode_chunk_8(
+     input: &[u8],
+@@ -232,12 +637,14 @@ fn decode_chunk_8(
+     output: &mut [u8],
+ ) -> Result<(), DecodeError> {
+     let morsel = decode_table[usize::from(input[0])];
++    let ghost s0 = morsel;
+     if morsel == INVALID_VALUE {
+         return Err(DecodeError::InvalidByte(index_at_start_of_input, input[0]));
+     }
+     let mut accum = u64::from(morsel) << 58;
+ 
+     let morsel = decode_table[usize::from(input[1])];
++    let ghost s1 = morsel;
+     if morsel == INVALID_VALUE {
+         return Err(DecodeError::InvalidByte(
+             index_at_start_of_input + 1,
+@@ -247,6 +654,7 @@ fn decode_chunk_8(
+     accum |= u64::from(morsel) << 52;
+ 
+     let morsel = decode_table[usize::from(input[2])];
++    let ghost s2 = morsel;
+     if morsel == INVALID_VALUE {
+         return Err(DecodeError::InvalidByte(
+             index_at_start_of_input + 2,
+@@ -256,6 +664,7 @@ fn decode_chunk_8(
+     accum |= u64::from(morsel) << 46;
+ 
+     let morsel = decode_table[usize::from(input[3])];
++    let ghost s3 = morsel;
+     if morsel == INVALID_VALUE {
+         return Err(DecodeError::InvalidByte(
+             index_at_start_of_input + 3,
+@@ -265,6 +674,7 @@ fn decode_chunk_8(
+     accum |= u64::from(morsel) << 40;
+ 
+     let morsel = decode_table[usize::from(input[4])];
++    let ghost s4 = morsel;
+     if morsel == INVALID_VALUE {
+         return Err(DecodeError::InvalidByte(
+             index_at_start_of_input + 4,
+@@ -274,6 +684,7 @@ fn decode_chunk_8(
+     accum |= u64::from(morsel) << 34;
+ 
+     let morsel = decode_table[usize::from(input[5])];
++    let ghost s5 = morsel;
+     if morsel == INVALID_VALUE {
+         return Err(DecodeError::InvalidByte(
+             index_at_start_of_input + 5,
+@@ -283,6 +694,7 @@ fn decode_chunk_8(
+     accum |= u64::from(morsel) << 28;
+ 
+     let morsel = decode_table[usize::from(input[6])];
++    let ghost s6 = morsel;
+     if morsel == INVALID_VALUE {
+         return Err(DecodeError::InvalidByte(
+             index_at_start_of_input + 6,
+@@ -292,6 +704,7 @@ fn decode_chunk_8(
+     accum |= u64::from(morsel) << 22;
+ 
+     let morsel = decode_table[usize::from(input[7])];
++    let ghost s7 = morsel;
+     if morsel == INVALID_VALUE {
+         return Err(DecodeError::InvalidByte(
+             index_at_start_of_input + 7,
+@@ -300,12 +713,52 @@ fn decode_chunk_8(
+     }
+     accum |= u64::from(morsel) << 16;
+ 
+-    output[..6].copy_from_slice(&accum.to_be_bytes()[..6]);
++    proof {
++      if s0 < 64 && s1 < 64 && s2 < 64 && s3 < 64 && s4 < 64 && s5 < 64 && s6 < 64 && s7 < 64 {
++        assert(((accum >> 56) as u8) == ((s0 << 2) | (s1 >> 4))) by(bit_vector)
++            requires s0 < 64, s1 < 64, s2 < 64, s3 < 64, s4 < 64, s5 < 64, s6 < 64, s7 < 64, accum == (((s0 as u64) << 58) | ((s1 as u64) << 52) | ((s2 as u64) << 46) | ((s3 as u64) << 40) | ((s4 as u64) << 34) | ((s5 as u64) << 28) | ((s6 as u64) << 22) | ((s7 as u64) << 16));
++        assert(((accum >> 48) as u8) == ((s1 << 4) | (s2 >> 2))) by(bit_vector)
++            requires s0 < 64, s1 < 64, s2 < 64, s3 < 64, s4 < 64, s5 < 64, s6 < 64, s7 < 64, accum == (((s0 as u64) << 58) | ((s1 as u64) << 52) | ((s2 as u64) << 46) | ((s3 as u64) << 40) | ((s4 as u64) << 34) | ((s5 as u64) << 28) | ((s6 as u64) << 22) | ((s7 as u64) << 16));
++        assert(((accum >> 40) as u8) == ((s2 << 6) | s3)) by(bit_vector)
++            requires s0 < 64, s1 < 64, s2 < 64, s3 < 64, s4 < 64, s5 < 64, s6 < 64, s7 < 64, accum == (((s0 as u64) << 58) | ((s1 as u64) << 52) | ((s2 as u64) << 46) | ((s3 as u64) << 40) | ((s4 as u64) << 34) | ((s5 as u64) << 28) | ((s6 as u64) << 22) | ((s7 as u64) << 16));
++        assert(((accum >> 32) as u8) == ((s4 << 2) | (s5 >> 4))) by(bit_vector)
++            requires s0 < 64, s1 < 64, s2 < 64, s3 < 64, s4 < 64, s5 < 64, s6 < 64, s7 < 64, accum == (((s0 as u64) << 58) | ((s1 as u64) << 52) | ((s2 as u64) << 46) | ((s3 as u64) << 40) | ((s4 as u64) << 34) | ((s5 as u64) << 28) | ((s6 as u64) << 22) | ((s7 as u64) << 16));
++        assert(((accum >> 24) as u8) == ((s5 << 4) | (s6 >> 2))) by(bit_vector)
++            requires s0 < 64, s1 < 64, s2 < 64, s3 < 64, s4 < 64, s5 < 64, s6 < 64, s7 < 64, accum == (((s0 as u64) << 58) | ((s1 as u64) << 52) | ((s2 as u64) << 46) | ((s3 as u64) << 40) | ((s4 as u64) << 34) | ((s5 as u64) << 28) | ((s6 as u64) << 22) | ((s7 as u64) << 16));
++        assert(((accum >> 16) as u8) == ((s6 << 6) | s7)) by(bit_vector)
++            requires s0 < 64, s1 < 64, s2 < 64, s3 < 64, s4 < 64, s5 < 64, s6 < 64, s7 < 64, accum == (((s0 as u64) << 58) | ((s1 as u64) << 52) | ((s2 as u64) << 46) | ((s3 as u64) << 40) | ((s4 as u64) << 34) | ((s5 as u64) << 28) | ((s6 as u64) << 22) | ((s7 as u64) << 16));
++    }
++    }
++    // Big-endian representation expansion of accum.to_be_bytes(); see t11 correspondence.
++    let accum_bytes = [(accum >> 56) as u8, (accum >> 48) as u8, (accum >> 40) as u8, (accum >> 32) as u8, (accum >> 24) as u8, (accum >> 16) as u8, (accum >> 8) as u8, (accum >> 0) as u8];
++    output[..6].copy_from_slice(&accum_bytes[..6]);
+ 
+     Ok(())
+ }
++}
++
+ 
+ /// Like [`decode_chunk_8`] but for 4 bytes of input and 3 bytes of output.
++verus! {
++#[verifier::verify]
++#[verus_spec(result =>
++    requires input.len() >= 4,
++        (exists|i: int| 0 <= i < 4 && decode_table@[input@[i] as int] == 255u8)
++            || old(output).len() >= 3,
++        forall|i: int| 0 <= i < 4 && decode_table@[input@[i] as int] == 255u8
++            ==> index_at_start_of_input as int + i <= usize::MAX,
++    ensures
++        result.is_ok() <==> (forall|i: int| 0 <= i < 4 ==> decode_table@[input@[i] as int] != 255u8),
++        result.is_err() ==> final(output)@ == old(output)@,
++        result.is_err() ==> exists|i: int| 0 <= i < 4
++            && decode_table@[input@[i] as int] == 255u8
++            && (forall|k: int| 0 <= k < i ==> decode_table@[input@[k] as int] != 255u8)
++            && result == Err(DecodeError::InvalidByte((index_at_start_of_input as int + i) as usize, input@[i])),
++        (forall|i: int| 0 <= i < 4 ==> decode_table@[input@[i] as int] < 64) ==>
++            (result == Ok(()) && forall|j: int| 0 <= j < 3 ==> final(output)@[j] == chunk_byte(input@, decode_table@, j)),
++        final(output)@.len() == old(output)@.len(),
++        forall|i: int| 3 <= i < final(output)@.len() ==> final(output)@[i] == old(output)@[i],
++)]
+ #[inline(always)]
+ fn decode_chunk_4(
+     input: &[u8],
+@@ -314,12 +767,14 @@ fn decode_chunk_4(
+     output: &mut [u8],
+ ) -> Result<(), DecodeError> {
+     let morsel = decode_table[usize::from(input[0])];
++    let ghost s0 = morsel;
+     if morsel == INVALID_VALUE {
+         return Err(DecodeError::InvalidByte(index_at_start_of_input, input[0]));
+     }
+     let mut accum = u32::from(morsel) << 26;
+ 
+     let morsel = decode_table[usize::from(input[1])];
++    let ghost s1 = morsel;
+     if morsel == INVALID_VALUE {
+         return Err(DecodeError::InvalidByte(
+             index_at_start_of_input + 1,
+@@ -329,6 +784,7 @@ fn decode_chunk_4(
+     accum |= u32::from(morsel) << 20;
+ 
+     let morsel = decode_table[usize::from(input[2])];
++    let ghost s2 = morsel;
+     if morsel == INVALID_VALUE {
+         return Err(DecodeError::InvalidByte(
+             index_at_start_of_input + 2,
+@@ -338,6 +794,7 @@ fn decode_chunk_4(
+     accum |= u32::from(morsel) << 14;
+ 
+     let morsel = decode_table[usize::from(input[3])];
++    let ghost s3 = morsel;
+     if morsel == INVALID_VALUE {
+         return Err(DecodeError::InvalidByte(
+             index_at_start_of_input + 3,
+@@ -346,10 +803,24 @@ fn decode_chunk_4(
+     }
+     accum |= u32::from(morsel) << 8;
+ 
+-    output[..3].copy_from_slice(&accum.to_be_bytes()[..3]);
++    proof {
++      if s0 < 64 && s1 < 64 && s2 < 64 && s3 < 64 {
++        assert(((accum >> 24) as u8) == ((s0 << 2) | (s1 >> 4))) by(bit_vector)
++            requires s0 < 64, s1 < 64, s2 < 64, s3 < 64, accum == (((s0 as u32) << 26) | ((s1 as u32) << 20) | ((s2 as u32) << 14) | ((s3 as u32) << 8));
++        assert(((accum >> 16) as u8) == ((s1 << 4) | (s2 >> 2))) by(bit_vector)
++            requires s0 < 64, s1 < 64, s2 < 64, s3 < 64, accum == (((s0 as u32) << 26) | ((s1 as u32) << 20) | ((s2 as u32) << 14) | ((s3 as u32) << 8));
++        assert(((accum >> 8) as u8) == ((s2 << 6) | s3)) by(bit_vector)
++            requires s0 < 64, s1 < 64, s2 < 64, s3 < 64, accum == (((s0 as u32) << 26) | ((s1 as u32) << 20) | ((s2 as u32) << 14) | ((s3 as u32) << 8));
++    }
++    }
++    // Big-endian representation expansion of accum.to_be_bytes(); see t11 correspondence.
++    let accum_bytes = [(accum >> 24) as u8, (accum >> 16) as u8, (accum >> 8) as u8, (accum >> 0) as u8];
++    output[..3].copy_from_slice(&accum_bytes[..3]);
+ 
+     Ok(())
+ }
++}
++
+ 
+ #[cfg(test)]
+ mod tests {
+diff --git a/src/engine/general_purpose/decode_suffix.rs b/src/engine/general_purpose/decode_suffix.rs
+index 81950df..4d00a7b 100644
+--- a/src/engine/general_purpose/decode_suffix.rs
++++ b/src/engine/general_purpose/decode_suffix.rs
+@@ -1,15 +1,226 @@
++use vstd::prelude::*;
+ use crate::alphabet::Symbol;
+ use crate::{
+     engine::{general_purpose::INVALID_VALUE, DecodeMetadata, DecodePaddingMode},
+     DecodeError, DecodeSliceError,
+ };
+ 
++verus! {
++/// Number of non-padding symbols in a canonical terminal group.
++pub(crate) open spec fn symbol_count(t: Seq<u8>) -> nat {
++    if t.len() == 0 { 0 } else { t.len() + 1 }
++}
++pub(crate) open spec fn tail_value(t: Seq<u8>, k: int) -> u8 {
++    let a = crate::round_trip_spec::byte_or_zero(t, 0);
++    let b = crate::round_trip_spec::byte_or_zero(t, 1);
++    let c = crate::round_trip_spec::byte_or_zero(t, 2);
++    if k == 0 { (a / 4) as u8 }
++    else if k == 1 { ((a % 4) * 16 + b / 16) as u8 }
++    else if k == 2 { ((b % 16) * 4 + c / 64) as u8 }
++    else { (c % 64) as u8 }
++}
++pub(crate) open spec fn tail_image(t: Seq<u8>, input: Seq<u8>, ii: nat) -> bool {
++    t.len() <= 3 && ii <= input.len()
++    && input.subrange(ii as int, input.len() as int) == crate::round_trip_spec::standard_encoding(t)
++    && (input.len() == 0 <==> t.len() == 0)
++}
++pub(crate) proof fn canonical_tail(t: Seq<u8>, table: Seq<u8>)
++    requires t.len() <= 3, table.len() == 256,
++        forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8,
++    ensures
++        crate::round_trip_spec::standard_encoding(t).len() == if t.len() == 0 { 0nat } else { 4nat },
++        forall|k: int| 0 <= k < symbol_count(t) ==> #[trigger] tail_value(t,k) < 64
++            && crate::round_trip_spec::standard_encoding(t)[k] == crate::round_trip_spec::standard_symbol(tail_value(t,k) as nat)
++            && crate::round_trip_spec::standard_encoding(t)[k] != 61
++            && table[crate::round_trip_spec::standard_encoding(t)[k] as int] == tail_value(t,k),
++        forall|k: int| symbol_count(t) <= k < 4 ==> #[trigger] tail_value(t,k) == 0,
++        forall|k: int| symbol_count(t) <= k < crate::round_trip_spec::standard_encoding(t).len() ==> crate::round_trip_spec::standard_encoding(t)[k] == 61,
++{
++    let a = crate::round_trip_spec::byte_or_zero(t,0);
++    let b = crate::round_trip_spec::byte_or_zero(t,1);
++    let c = crate::round_trip_spec::byte_or_zero(t,2);
++    assert(a <= 255 && b <= 255 && c <= 255);
++    assert forall|k: int| 0 <= k < symbol_count(t) implies #[trigger] tail_value(t,k) < 64
++        && crate::round_trip_spec::standard_encoding(t)[k] == crate::round_trip_spec::standard_symbol(tail_value(t,k) as nat)
++        && crate::round_trip_spec::standard_encoding(t)[k] != 61
++        && table[crate::round_trip_spec::standard_encoding(t)[k] as int] == tail_value(t,k) by {
++        assert(0 <= k < 4 && k / 4 == 0 && k % 4 == k);
++        if k == 0 {} else if k == 1 {} else if k == 2 {} else {}
++        let v = tail_value(t,k) as nat;
++        assert(v < 64);
++        assert(crate::round_trip_spec::standard_symbol(v) != 61) by {
++            if v < 26 {} else if v < 52 {} else if v < 62 {} else if v == 62 {} else {}
++        }
++    }
++    assert forall|k: int| symbol_count(t) <= k < 4 implies #[trigger] tail_value(t,k) == 0 by {
++        if t.len() == 0 {} else if t.len() == 1 {} else if t.len() == 2 {} else {}
++    }
++    assert forall|k: int| symbol_count(t) <= k < crate::round_trip_spec::standard_encoding(t).len() implies crate::round_trip_spec::standard_encoding(t)[k] == 61 by {
++        assert(0 <= k < 4 && k / 4 == 0 && k % 4 == k);
++        if t.len() == 1 {} else if t.len() == 2 {} else {}
++    }
++}
++
++pub(crate) open spec fn terminal_input_index(x: Seq<u8>) -> nat {
++    if x.len() == 0 { 0 } else { (crate::round_trip_spec::encoded_size(x.len()) - 4) as nat }
++}
++pub(crate) open spec fn terminal_output_index(x: Seq<u8>) -> nat {
++    3 * (terminal_input_index(x) / 4)
++}
++pub(crate) open spec fn terminal_tail(x: Seq<u8>) -> Seq<u8> {
++    x.subrange(terminal_output_index(x) as int, x.len() as int)
++}
++/// Derive local membership from the preceding canonical encode observation.
++pub(crate) proof fn canonical_suffix_image(x: Seq<u8>)
++    ensures
++        terminal_input_index(x) <= crate::round_trip_spec::standard_encoding(x).len(),
++        crate::round_trip_spec::standard_encoding(x).len() - terminal_input_index(x) <= 4,
++        terminal_input_index(x) % 4 == 0,
++        terminal_output_index(x) <= x.len(),
++        terminal_tail(x).len() <= 3,
++        tail_image(terminal_tail(x), crate::round_trip_spec::standard_encoding(x), terminal_input_index(x)),
++{
++    let ii = terminal_input_index(x);
++    let oi = terminal_output_index(x);
++    let t = terminal_tail(x);
++    let e = crate::round_trip_spec::standard_encoding(x);
++    if x.len() == 0 {
++        assert(ii == 0 && oi == 0 && t.len() == 0 && e.len() == 0);
++    } else {
++        if x.len() % 3 == 0 {} else if x.len() % 3 == 1 {} else {}
++        assert(ii % 4 == 0 && oi <= x.len() && 1 <= x.len() - oi <= 3);
++        assert(t.len() == x.len() - oi);
++        assert(crate::round_trip_spec::standard_encoding(t).len() == 4);
++        assert forall|k: nat| k < 3 implies #[trigger] crate::round_trip_spec::byte_or_zero(t,k) == crate::round_trip_spec::byte_or_zero(x,oi+k) by {
++            if k < t.len() { assert(t[k as int] == x[(oi+k) as int]); } else {}
++        }
++        assert forall|j: int| 0 <= j < 4 implies e[ii as int+j] == crate::round_trip_spec::standard_encoding(t)[j] by {
++            assert((ii+j) / 4 == ii / 4 && (ii+j) % 4 == j);
++            assert(j / 4 == 0 && j % 4 == j);
++            assert(3 * ((ii+j)/4) == oi);
++            assert(crate::round_trip_spec::byte_or_zero(t,0) == crate::round_trip_spec::byte_or_zero(x,oi));
++            assert(crate::round_trip_spec::byte_or_zero(t,1) == crate::round_trip_spec::byte_or_zero(x,oi+1));
++            assert(crate::round_trip_spec::byte_or_zero(t,2) == crate::round_trip_spec::byte_or_zero(x,oi+2));
++            if j == 0 {} else if j == 1 {} else if j == 2 {} else {}
++        }
++    }
++    assert(e.subrange(ii as int,e.len() as int) =~= crate::round_trip_spec::standard_encoding(t));
++}
++
++pub(crate) open spec fn tail_word(t: Seq<u8>) -> u32 {
++    ((crate::round_trip_spec::byte_or_zero(t,0) as u32) << 24)
++    | ((crate::round_trip_spec::byte_or_zero(t,1) as u32) << 16)
++    | ((crate::round_trip_spec::byte_or_zero(t,2) as u32) << 8)
++}
++pub(crate) proof fn pack_tail(t: Seq<u8>)
++    requires t.len() <= 3,
++    ensures
++        (((tail_value(t,0) as u32) << 26) | ((tail_value(t,1) as u32) << 20)
++            | ((tail_value(t,2) as u32) << 14) | ((tail_value(t,3) as u32) << 8)) == tail_word(t),
++        (tail_word(t) & (!0u32 >> (t.len() * 8))) == 0,
++{
++    let a = crate::round_trip_spec::byte_or_zero(t,0) as u8;
++    let b = crate::round_trip_spec::byte_or_zero(t,1) as u8;
++    let c = crate::round_trip_spec::byte_or_zero(t,2) as u8;
++    assert(a as nat == crate::round_trip_spec::byte_or_zero(t,0));
++    assert(b as nat == crate::round_trip_spec::byte_or_zero(t,1));
++    assert(c as nat == crate::round_trip_spec::byte_or_zero(t,2));
++    let s0 = tail_value(t,0);
++    let s1 = tail_value(t,1);
++    let s2 = tail_value(t,2);
++    let s3 = tail_value(t,3);
++    assert(s0 == ((a as u32) / 4) as u8);
++    assert(s1 == (((a as u32) % 4) * 16 + (b as u32) / 16) as u8);
++    assert(s2 == (((b as u32) % 16) * 4 + (c as u32) / 64) as u8);
++    assert(s3 == ((c as u32) % 64) as u8);
++    assert((((s0 as u32) << 26) | ((s1 as u32) << 20) | ((s2 as u32) << 14) | ((s3 as u32) << 8))
++        == (((a as u32) << 24) | ((b as u32) << 16) | ((c as u32) << 8))) by(bit_vector)
++        requires s0 == ((a as u32) / 4) as u8,
++            s1 == (((a as u32) % 4) * 16 + (b as u32) / 16) as u8,
++            s2 == (((b as u32) % 16) * 4 + (c as u32) / 64) as u8,
++            s3 == ((c as u32) % 64) as u8;
++    let w = tail_word(t);
++    assert(w == (((a as u32) << 24) | ((b as u32) << 16) | ((c as u32) << 8)));
++    if t.len() == 0 {
++        assert(a == 0 && b == 0 && c == 0);
++        assert(w == 0) by(bit_vector) requires a == 0, b == 0, c == 0,
++            w == (((a as u32) << 24) | ((b as u32) << 16) | ((c as u32) << 8));
++        assert(w & (!0u32 >> 0) == 0) by(bit_vector) requires w == 0;
++    } else if t.len() == 1 {
++        assert(b == 0 && c == 0);
++        assert(w & (!0u32 >> 8) == 0) by(bit_vector) requires b == 0, c == 0,
++            w == (((a as u32) << 24) | ((b as u32) << 16) | ((c as u32) << 8));
++    } else if t.len() == 2 {
++        assert(c == 0);
++        assert(w & (!0u32 >> 16) == 0) by(bit_vector) requires c == 0,
++            w == (((a as u32) << 24) | ((b as u32) << 16) | ((c as u32) << 8));
++    } else {
++        assert(w & (!0u32 >> 24) == 0) by(bit_vector) requires
++            w == (((a as u32) << 24) | ((b as u32) << 16) | ((c as u32) << 8));
++    }
++}
++pub(crate) proof fn next_tail_byte(t: Seq<u8>, j: usize, w: u32)
++    requires t.len() <= 3, j < t.len(), w == (tail_word(t) << (j * 8)),
++    ensures (w >> 24) <= 255, (w >> 24) as u8 == t[j as int],
++        (w << 8) == (tail_word(t) << ((j + 1) * 8)),
++{
++    let a = crate::round_trip_spec::byte_or_zero(t,0) as u8;
++    let b = crate::round_trip_spec::byte_or_zero(t,1) as u8;
++    let c = crate::round_trip_spec::byte_or_zero(t,2) as u8;
++    assert((w >> 24) <= 255) by(bit_vector);
++    let original = tail_word(t);
++    assert(original == (((a as u32) << 24) | ((b as u32) << 16) | ((c as u32) << 8)));
++    if j == 0 {
++        assert((w >> 24) as u8 == a) by(bit_vector) requires j == 0, w == (original << (j * 8)),
++            original == (((a as u32) << 24) | ((b as u32) << 16) | ((c as u32) << 8));
++    } else if j == 1 {
++        assert((w >> 24) as u8 == b) by(bit_vector) requires j == 1, w == (original << (j * 8)),
++            original == (((a as u32) << 24) | ((b as u32) << 16) | ((c as u32) << 8));
++    } else {
++        assert(j == 2);
++        assert((w >> 24) as u8 == c) by(bit_vector) requires j == 2, w == (original << (j * 8)),
++            original == (((a as u32) << 24) | ((b as u32) << 16) | ((c as u32) << 8));
++    }
++    assert((w << 8) == (original << ((j + 1) * 8))) by(bit_vector)
++        requires j < 3, w == (original << (j * 8));
++}
++
++/// Conditional canonical case; arbitrary dispatch needs no terminal witness.
++pub(crate) open spec fn canonical_use(t: Seq<u8>, input: Seq<u8>, ii: nat,
++    table: Seq<u8>, padding: u8, mode: DecodePaddingMode) -> bool {
++    tail_image(t, input, ii) && padding == 61
++    && mode == DecodePaddingMode::RequireCanonical
++    && forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8
++}
++
+ /// Decode the last 0-4 bytes, checking for trailing set bits and padding per the provided
+ /// parameters.
+ ///
+ /// Returns the decode metadata representing the total number of bytes decoded, including the ones
+ /// indicated as already written by `output_index`.
+ #[allow(clippy::too_many_arguments)]
++#[verifier::verify]
++#[verus_spec(result =>
++    with Ghost(t): Ghost<Seq<u8>>
++    requires input_index <= input.len(), input.len() - input_index <= 4,
++        output_index <= old(output)@.len(),
++        canonical_use(t, input@, input_index as nat, decode_table@, padding.byte(), padding_mode)
++            ==> output_index as nat + t.len() <= old(output)@.len(),
++    ensures final(output)@.len() == old(output)@.len(),
++        (match result { Ok(m) => output_index <= m.decoded_len <= final(output)@.len()
++            && m.decoded_len as nat <= output_index as nat + 3
++            && (forall|j: int| 0 <= j < final(output)@.len()
++                && (j < output_index || m.decoded_len <= j)
++                ==> final(output)@[j] == old(output)@[j]), Err(_) => true }),
++        canonical_use(t, input@, input_index as nat, decode_table@, padding.byte(), padding_mode) ==> match result {
++        Ok(m) => m.decoded_len as nat == output_index as nat + t.len()
++            && final(output)@.len() == old(output)@.len()
++            && (forall|j: int| 0 <= j < t.len() ==> final(output)@[output_index as int + j] == t[j])
++            && (forall|j: int| 0 <= j < final(output)@.len() && (j < output_index || output_index as nat + t.len() <= j) ==> final(output)@[j] == old(output)@[j])
++            && m.padding_offset == if 0 < t.len() < 3 { Some((input_index as nat + symbol_count(t)) as usize) } else { None },
++        Err(_) => false,
++    },
++)]
+ pub(crate) fn decode_suffix(
+     input: &[u8],
+     input_index: usize,
+@@ -19,7 +230,11 @@ pub(crate) fn decode_suffix(
+     decode_allow_trailing_bits: bool,
+     padding: Symbol,
+     padding_mode: DecodePaddingMode,
+-) -> Result<DecodeMetadata, DecodeSliceError> {
++) -> Result<DecodeMetadata, DecodeSliceError>
++{
++    let ghost initial_output_index = output_index;
++    let ghost canonical = canonical_use(t, input@, input_index as nat, decode_table@, padding.byte(), padding_mode);
++    proof { if canonical { canonical_tail(t, decode_table@); } }
+     debug_assert!((input.len() - input_index) <= 4);
+ 
+     // Decode any leftovers that might not be a complete input chunk of 4 bytes.
+@@ -32,7 +247,39 @@ pub(crate) fn decode_suffix(
+     let mut last_symbol_value = 0_u8;
+     let mut morsels = [0_u8; 4];
+ 
+-    for (leftover_index, &b) in input[input_index..].iter().enumerate() {
++    let mut leftover_index = 0usize;
++    while leftover_index < input.len() - input_index
++        invariant
++            canonical == canonical_use(t, input@, input_index as nat, decode_table@, padding.byte(), padding_mode),
++            canonical ==> tail_image(t, input@, input_index as nat),
++            canonical ==> (padding.byte() == 61 && padding_mode == DecodePaddingMode::RequireCanonical),
++            canonical ==> forall|v: nat| v < 64 ==> decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8,
++            decode_table.len() == 256,
++            output@ == old(output)@,
++            output_index == initial_output_index,
++            canonical ==> output_index as nat + t.len() <= output@.len(),
++            canonical ==> morsels_in_leftover == if leftover_index < symbol_count(t) { leftover_index as nat } else { symbol_count(t) },
++            canonical ==> padding_bytes_count == if leftover_index <= symbol_count(t) { 0nat } else { (leftover_index as nat - symbol_count(t)) as nat },
++            canonical ==> padding_bytes_count > 0 ==> first_padding_offset == symbol_count(t),
++            canonical ==> forall|j: int| 0 <= j < morsels_in_leftover ==> morsels@[j] == tail_value(t,j),
++            input_index <= input.len(), input.len() - input_index <= 4,
++            leftover_index <= input.len() - input_index,
++            morsels_in_leftover + padding_bytes_count == leftover_index,
++            padding_bytes_count > 0 ==> 2 <= first_padding_offset < leftover_index,
++            padding_bytes_count > 0 ==> morsels_in_leftover == first_padding_offset,
++            forall|j: int| morsels_in_leftover <= j < 4 ==> morsels@[j] == 0,
++            output_index <= output.len(),
++            morsels.len() == 4,
++        decreases input.len() - input_index - leftover_index,
++    {
++        proof { if canonical { canonical_tail(t, decode_table@); } }
++        let b = input[input_index + leftover_index];
++        proof { if canonical {
++            assert(b == crate::round_trip_spec::standard_encoding(t)[leftover_index as int]);
++            if leftover_index < symbol_count(t) {
++                assert(b != 61 && decode_table@[b as int] == tail_value(t,leftover_index as int));
++            } else { assert(b == 61); }
++        } }
+         // '=' padding
+         if b == padding.as_u8() {
+             // There can be bad padding bytes in a few ways:
+@@ -63,6 +310,7 @@ pub(crate) fn decode_suffix(
+             }
+ 
+             padding_bytes_count += 1;
++            leftover_index += 1;
+             continue;
+         }
+ 
+@@ -90,8 +338,10 @@ pub(crate) fn decode_suffix(
+ 
+         morsels[morsels_in_leftover] = morsel;
+         morsels_in_leftover += 1;
++        leftover_index += 1;
+     }
+ 
++    proof { if canonical { canonical_tail(t, decode_table@); } }
+     // If there was 1 trailing byte, and it was valid, and we got to this point without hitting
+     // an invalid byte, now we can report invalid length
+     if !input.is_empty() && morsels_in_leftover < 2 {
+@@ -138,6 +388,28 @@ pub(crate) fn decode_suffix(
+     // if there are bits set outside the bits we care about, last symbol encodes trailing bits that
+     // will not be included in the output
+     let mask = !0_u32 >> (leftover_bytes_to_append * 8);
++    let ghost m0 = morsels@[0];
++    let ghost m1 = morsels@[1];
++    let ghost m2 = morsels@[2];
++    let ghost m3 = morsels@[3];
++    proof { if canonical {
++        assert(morsels_in_leftover == symbol_count(t));
++        assert(leftover_bytes_to_append == t.len());
++        assert forall|k: int| 0 <= k < 4 implies morsels@[k] == tail_value(t,k) by {
++            if k < morsels_in_leftover {} else {}
++        }
++        pack_tail(t);
++        assert(leftover_num == tail_word(t));
++        assert(leftover_num & mask == 0);
++        assert(leftover_num == (leftover_num << 0)) by(bit_vector);
++    }
++        if morsels_in_leftover == 0 {
++            assert(m0 == 0 && m1 == 0 && m2 == 0 && m3 == 0);
++            assert(leftover_num == 0) by(bit_vector) requires m0 == 0, m1 == 0, m2 == 0, m3 == 0,
++                leftover_num == ((m0 as u32) << 26) | ((m1 as u32) << 20) | ((m2 as u32) << 14) | ((m3 as u32) << 8);
++            assert(leftover_num & mask == 0) by(bit_vector) requires leftover_num == 0;
++        }
++    }
+     if !decode_allow_trailing_bits && (leftover_num & mask) != 0 {
+         // last morsel is at `morsels_in_leftover` - 1
+         return Err(DecodeError::InvalidLastSymbol {
+@@ -150,12 +422,37 @@ pub(crate) fn decode_suffix(
+ 
+     // Strangely, this approach benchmarks better than writing bytes one at a time,
+     // or copy_from_slice into output.
+-    for _ in 0..leftover_bytes_to_append {
++    for appended in 0..leftover_bytes_to_append
++        invariant
++            canonical == canonical_use(t, input@, input_index as nat, decode_table@, padding.byte(), padding_mode),
++            output_index == initial_output_index + appended,
++            output_index <= output@.len(),
++            forall|j: int| 0 <= j < output@.len() && (j < initial_output_index || initial_output_index as nat + 3 <= j) ==> output@[j] == old(output)@[j],
++            leftover_bytes_to_append <= 3,
++            canonical ==> initial_output_index as nat + t.len() <= output@.len(),
++            canonical ==> leftover_bytes_to_append == t.len() && t.len() <= 3,
++            canonical ==> leftover_num == (tail_word(t) << (appended * 8)),
++            output@.len() == old(output)@.len(), output@.len() <= usize::MAX,
++            canonical ==> forall|j: int| 0 <= j < appended ==> output@[initial_output_index as int + j] == t[j],
++            forall|j: int| 0 <= j < output@.len() && (j < initial_output_index || initial_output_index as nat + appended <= j) ==> output@[j] == old(output)@[j],
++            canonical ==> (padding_bytes_count > 0 <==> 0 < t.len() < 3),
++            canonical ==> (padding_bytes_count > 0 ==> first_padding_offset == symbol_count(t)),
++            padding_bytes_count > 0 ==> first_padding_offset < input.len() - input_index,
++            input_index <= input.len(), input.len() - input_index <= 4,
++            canonical ==> symbol_count(t) <= input.len() - input_index,
++
++    {
++        proof { if canonical { next_tail_byte(t, appended, leftover_num); } }
++        proof { assert((leftover_num >> 24) <= 255) by(bit_vector); }
+         let hi_byte = (leftover_num >> 24) as u8;
+         leftover_num <<= 8;
++        proof {
++            if canonical { assert(output_index < output@.len()); }
++        }
+         *output
+             .get_mut(output_index)
+             .ok_or(DecodeSliceError::OutputSliceTooSmall)? = hi_byte;
++        proof { assert(output_index < output@.len()); }
+         output_index += 1;
+     }
+ 
+@@ -168,3 +465,5 @@ pub(crate) fn decode_suffix(
+         },
+     ))
+ }
++
++}
+diff --git a/src/engine/general_purpose/mod.rs b/src/engine/general_purpose/mod.rs
+index 802d76b..636242d 100644
+--- a/src/engine/general_purpose/mod.rs
++++ b/src/engine/general_purpose/mod.rs
+@@ -1,6 +1,8 @@
+ //! Provides the [`GeneralPurpose`] engine and associated config types.
+ //!
+ //! See preconfigured engines like [`STANDARD_NO_PAD`] or [`STANDARD_NO_PAD_INDIFFERENT`].
++#[allow(unused_imports)]
++use vstd::prelude::*;
+ use crate::alphabet::Symbol;
+ use crate::{
+     alphabet,
+@@ -15,7 +17,10 @@ pub(crate) mod decode_suffix;
+ 
+ pub use decode::GeneralPurposeEstimate;
+ 
+-pub(crate) const INVALID_VALUE: u8 = 255;
++vstd::prelude::verus! { pub(crate) exec const INVALID_VALUE: u8 
++ ensures INVALID_VALUE == 255u8
++ { 255 }
++}
+ 
+ /// A general-purpose base64 engine.
+ ///
+@@ -25,6 +30,7 @@ pub(crate) const INVALID_VALUE: u8 = 255;
+ /// - It is not constant-time, though, so it is vulnerable to timing side-channel attacks. For loading cryptographic keys, etc, it is suggested to use the forthcoming constant-time implementation.
+ 
+ #[derive(Debug, Clone)]
++#[verifier::verify]
+ pub struct GeneralPurpose {
+     encode_table: [u8; 64],
+     decode_table: [u8; 256],
+@@ -39,20 +45,6 @@ pub struct GeneralPurpose {
+ pub type Scalar = GeneralPurpose;
+ 
+ impl GeneralPurpose {
+-    /// Create a `GeneralPurpose` engine from an [Alphabet].
+-    ///
+-    /// While not very expensive to initialize, ideally these should be cached
+-    /// if the engine will be used repeatedly.
+-    #[must_use]
+-    pub const fn new(alphabet: &Alphabet, config: GeneralPurposeConfig) -> Self {
+-        Self {
+-            encode_table: encode_table(alphabet),
+-            decode_table: decode_table(alphabet),
+-            padding: alphabet.padding,
+-            config,
+-        }
+-    }
+-
+     /// The 6-bit-index-to-ASCII encode table.
+     #[cfg(all(
+         feature = "simd-unsafe",
+@@ -78,24 +70,68 @@ impl GeneralPurpose {
+     }
+ }
+ 
++verus! {
++#[verifier::verify]
+ impl super::Engine for GeneralPurpose {
++    closed spec fn is_standard(&self) -> bool {
++        self.config.encode_padding && !self.config.decode_allow_trailing_bits
++        && self.config.decode_padding_mode == DecodePaddingMode::RequireCanonical
++        && self.padding.byte() == 61u8
++        && self.encode_table@ == Seq::new(64, |i: int| crate::round_trip_spec::standard_symbol(i as nat))
++        && forall|i: int| 0 <= i < 64 ==> self.decode_table@[self.encode_table@[i] as int] == i as u8
++    }
+     type Config = GeneralPurposeConfig;
+     type DecodeEstimate = GeneralPurposeEstimate;
+ 
+     fn internal_encode(&self, input: &[u8], output: &mut [u8]) -> usize {
+-        encode_helper(&self.encode_table, input, output, |_, _| (0, 0))
++        // Verification-only expansion of encode_helper for this exact scalar callback.
++        let simd_prefix = |_: &[u8], out: &mut [u8]| -> (result: (usize, usize))
++            ensures result == (0usize, 0usize), final(out)@ == old(out)@,
++        { (0usize, 0usize) };
++        let (input_index, output_index) = simd_prefix(input, output);
++        debug_assert!(input_index % 3 == 0, "prefix must consume whole 3-byte groups");
++        debug_assert!(output_index == input_index / 3 * 4, "prefix output must match consumed input");
++        debug_assert!(input_index <= input.len());
++        debug_assert!(output_index <= output.len());
++        proof { crate::encode_bridge::raw_capacity(input@.len()); }
++        encode_scalar_tail(&self.encode_table, input, output, input_index, output_index)
+     }
+ 
+     fn internal_decoded_len_estimate(&self, input_len: usize) -> Self::DecodeEstimate {
+         GeneralPurposeEstimate::new(input_len)
+     }
+ 
++    #[verus_spec]
+     fn internal_decode(
+         &self,
+         input: &[u8],
+         output: &mut [u8],
+         estimate: Self::DecodeEstimate,
+     ) -> Result<DecodeMetadata, DecodeSliceError> {
++        let ghost before = output@;
++        proof { estimate.compatible_facts(input@.len()); }
++        let ghost x = if crate::round_trip_spec::round_trip_decode_requires(input@, before) {
++            choose|x: Seq<u8>| crate::round_trip_spec::decode_requires(x,input@,before)
++        } else { Seq::<u8>::empty() };
++        let scalar_prefix = |_: &[u8], _: usize, out: &mut [u8]| -> (r: (usize,usize))
++            ensures r == (0usize,0usize), final(out)@ == old(out)@,
++        { (0usize,0usize) };
++        proof {
++            if self.is_standard() && crate::round_trip_spec::round_trip_decode_requires(input@, before) {
++                assert(crate::round_trip_spec::decode_requires(x,input@,before));
++                assert forall|v: nat| v < 64 implies self.decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8 by {
++                    assert(self.encode_table@[v as int] == crate::round_trip_spec::standard_symbol(v));
++                }
++                assert(decode::canonical_helper_use(x,input@,before,self.decode_table@,self.padding.byte(),self.config.decode_padding_mode));
++            }
++        }
++        proof {
++            assert(estimate.remainder() == input@.len() % 4);
++            assert forall|i: &[u8], n: usize, o: &mut [u8]| #[trigger] call_requires(scalar_prefix,(i,n,o)) by {};
++            assert forall|i: &[u8], n: usize, o: &mut [u8], r: (usize,usize)| #[trigger] call_ensures(scalar_prefix,(i,n,o),r)
++                implies r == (0usize,0usize) && final(o)@ == o@ by {};
++        }
++        let result = { proof_with! { Ghost(x) }
+         decode::decode_helper(
+             input,
+             &estimate,
+@@ -104,11 +140,25 @@ impl super::Engine for GeneralPurpose {
+             self.config.decode_allow_trailing_bits,
+             self.padding,
+             self.config.decode_padding_mode,
+-            |_, _, _| (0, 0),
+-        )
++            scalar_prefix,
++        ) };
++        proof {
++            if self.is_standard() && crate::round_trip_spec::round_trip_decode_requires(input@, before) {
++                match &result {
++                    Ok(dm) => {
++                        crate::round_trip_proof::chosen_witness_establishes_universal(
++                            x,input@,input@,before,output@,Ok::<usize,DecodeSliceError>(dm.written()));
++                    },
++                    Err(_) => {},
++                }
++            }
++        }
++        result
+     }
+ 
+-    fn config(&self) -> &Self::Config {
++    fn config(&self) -> (result: &Self::Config)
++        ensures self.is_standard() ==> result.padding_enabled(),
++    {
+         &self.config
+     }
+ 
+@@ -117,13 +167,17 @@ impl super::Engine for GeneralPurpose {
+     }
+ }
+ 
++}
++
+ /// Scalar base64 encode of `input` into `output`, returning the number of bytes written.
+ ///
+ /// `simd_prefix` gets first crack at the input, returning `(input_consumed, output_written)`. It
+ /// must consume whole 3-byte groups: `input_consumed % 3 == 0`, `output_written == input_consumed /
+ /// 3 * 4`, both in bounds, and only those `output_written` bytes are written. `(0, 0)` (pure scalar)
+ /// is always valid.
++verus! {
+ #[inline]
++#[verifier::external_body]
+ pub(crate) fn encode_helper(
+     encode_table: &[u8; 64],
+     input: &[u8],
+@@ -148,13 +202,247 @@ pub(crate) fn encode_helper(
+ 
+ /// Scalar encode of `input[input_index..]` into `output[output_index..]`, resuming from a 3-byte
+ /// group boundary. Returns the total number of output bytes written.
++// Solver facts are reintroduced inside each loop: pre-loop facts are not loop invariants.
++proof fn encode_index_bounds()
++    ensures
++        forall|v: u64| #[trigger] (v & 0x3fu64) < 64u64,
++        forall|v: u8| #[trigger] (v & 0x3fu8) < 64u8,
++        forall|v: u8| #[trigger] (v >> 2u8) < 64u8,
++{
++    assert forall|v: u64| #[trigger] (v & 0x3fu64) < 64u64 by {
++        assert((v & 0x3fu64) < 64u64) by (bit_vector);
++    }
++    assert forall|v: u8| #[trigger] (v & 0x3fu8) < 64u8 by {
++        assert((v & 0x3fu8) < 64u8) by (bit_vector);
++    }
++    assert forall|v: u8| #[trigger] (v >> 2u8) < 64u8 by {
++        assert((v >> 2u8) < 64u8) by (bit_vector);
++    }
++}
++
++proof fn encode_three_arithmetic(a: u8, b: u8, c: u8)
++    ensures
++        (a >> 2u8) as nat == (a as nat) / 4,
++        ((a << 4u8 | b >> 4u8) & 63u8) as nat == (a as nat % 4) * 16 + (b as nat) / 16,
++        ((b << 2u8 | c >> 6u8) & 63u8) as nat == (b as nat % 16) * 4 + (c as nat) / 64,
++        (c & 63u8) as nat == (c as nat) % 64,
++{
++    assert((a >> 2u8) == a / 4u8) by (bit_vector);
++    assert(((a << 4u8 | b >> 4u8) & 63u8) == ((a % 4u8) * 16u8 + b / 16u8) as u8) by (bit_vector);
++    assert(((b << 2u8 | c >> 6u8) & 63u8) == ((b % 16u8) * 4u8 + c / 64u8) as u8) by (bit_vector);
++    assert((c & 63u8) == c % 64u8) by (bit_vector);
++}
++
++proof fn encode_three_at(x: Seq<u8>, i: nat, o: nat)
++    requires i % 3 == 0, o == i / 3 * 4, i + 3 <= x.len(),
++    ensures
++        crate::round_trip_spec::encoded_byte(x, o) == crate::round_trip_spec::standard_symbol((x[i as int] >> 2u8) as nat),
++        crate::round_trip_spec::encoded_byte(x, o+1) == crate::round_trip_spec::standard_symbol(((x[i as int] << 4u8 | x[(i+1) as int] >> 4u8) & 63u8) as nat),
++        crate::round_trip_spec::encoded_byte(x, o+2) == crate::round_trip_spec::standard_symbol(((x[(i+1) as int] << 2u8 | x[(i+2) as int] >> 6u8) & 63u8) as nat),
++        crate::round_trip_spec::encoded_byte(x, o+3) == crate::round_trip_spec::standard_symbol((x[(i+2) as int] & 63u8) as nat),
++{
++    encode_three_arithmetic(x[i as int], x[(i+1) as int], x[(i+2) as int]);
++    assert(i == 3 * (i / 3)) by (nonlinear_arith) requires i % 3 == 0, o == i / 3 * 4;
++    assert(o % 4 == 0 && (o+1) % 4 == 1 && (o+2) % 4 == 2 && (o+3) % 4 == 3) by (nonlinear_arith) requires i % 3 == 0, o == i / 3 * 4;
++    assert(3*(o/4) == i && 3*((o+1)/4) == i && 3*((o+2)/4) == i && 3*((o+3)/4) == i) by (nonlinear_arith) requires i % 3 == 0, o == i / 3 * 4;
++}
++
++proof fn encode_word_bits(w: u64, a: u8, b: u8, c: u8, d: u8, e: u8, f: u8, g: u8, h: u8)
++    requires w == ((a as u64) << 56u64) | ((b as u64) << 48u64) | ((c as u64) << 40u64) | ((d as u64) << 32u64) | ((e as u64) << 24u64) | ((f as u64) << 16u64) | ((g as u64) << 8u64) | (h as u64),
++    ensures
++        ((w >> 58u64) & 63u64) < 64u64,
++        ((w >> 52u64) & 63u64) < 64u64,
++        ((w >> 46u64) & 63u64) < 64u64,
++        ((w >> 40u64) & 63u64) < 64u64,
++        ((w >> 34u64) & 63u64) < 64u64,
++        ((w >> 28u64) & 63u64) < 64u64,
++        ((w >> 22u64) & 63u64) < 64u64,
++        ((w >> 16u64) & 63u64) < 64u64,
++        ((w >> 58u64) & 63u64) == (a >> 2u8) as u64,
++        ((w >> 52u64) & 63u64) == ((a << 4u8 | b >> 4u8) & 63u8) as u64,
++        ((w >> 46u64) & 63u64) == ((b << 2u8 | c >> 6u8) & 63u8) as u64,
++        ((w >> 40u64) & 63u64) == (c & 63u8) as u64,
++        ((w >> 34u64) & 63u64) == (d >> 2u8) as u64,
++        ((w >> 28u64) & 63u64) == ((d << 4u8 | e >> 4u8) & 63u8) as u64,
++        ((w >> 22u64) & 63u64) == ((e << 2u8 | f >> 6u8) & 63u8) as u64,
++        ((w >> 16u64) & 63u64) == (f & 63u8) as u64,
++{
++    assert(((w >> 58u64) & 63u64) < 64u64) by (bit_vector);
++    assert(((w >> 52u64) & 63u64) < 64u64) by (bit_vector);
++    assert(((w >> 46u64) & 63u64) < 64u64) by (bit_vector);
++    assert(((w >> 40u64) & 63u64) < 64u64) by (bit_vector);
++    assert(((w >> 34u64) & 63u64) < 64u64) by (bit_vector);
++    assert(((w >> 28u64) & 63u64) < 64u64) by (bit_vector);
++    assert(((w >> 22u64) & 63u64) < 64u64) by (bit_vector);
++    assert(((w >> 16u64) & 63u64) < 64u64) by (bit_vector);
++    assert(((w >> 58u64) & 63u64) == (a >> 2u8) as u64) by (bit_vector) requires w == ((a as u64) << 56u64) | ((b as u64) << 48u64) | ((c as u64) << 40u64) | ((d as u64) << 32u64) | ((e as u64) << 24u64) | ((f as u64) << 16u64) | ((g as u64) << 8u64) | (h as u64);
++    assert(((w >> 52u64) & 63u64) == ((a << 4u8 | b >> 4u8) & 63u8) as u64) by (bit_vector) requires w == ((a as u64) << 56u64) | ((b as u64) << 48u64) | ((c as u64) << 40u64) | ((d as u64) << 32u64) | ((e as u64) << 24u64) | ((f as u64) << 16u64) | ((g as u64) << 8u64) | (h as u64);
++    assert(((w >> 46u64) & 63u64) == ((b << 2u8 | c >> 6u8) & 63u8) as u64) by (bit_vector) requires w == ((a as u64) << 56u64) | ((b as u64) << 48u64) | ((c as u64) << 40u64) | ((d as u64) << 32u64) | ((e as u64) << 24u64) | ((f as u64) << 16u64) | ((g as u64) << 8u64) | (h as u64);
++    assert(((w >> 40u64) & 63u64) == (c & 63u8) as u64) by (bit_vector) requires w == ((a as u64) << 56u64) | ((b as u64) << 48u64) | ((c as u64) << 40u64) | ((d as u64) << 32u64) | ((e as u64) << 24u64) | ((f as u64) << 16u64) | ((g as u64) << 8u64) | (h as u64);
++    assert(((w >> 34u64) & 63u64) == (d >> 2u8) as u64) by (bit_vector) requires w == ((a as u64) << 56u64) | ((b as u64) << 48u64) | ((c as u64) << 40u64) | ((d as u64) << 32u64) | ((e as u64) << 24u64) | ((f as u64) << 16u64) | ((g as u64) << 8u64) | (h as u64);
++    assert(((w >> 28u64) & 63u64) == ((d << 4u8 | e >> 4u8) & 63u8) as u64) by (bit_vector) requires w == ((a as u64) << 56u64) | ((b as u64) << 48u64) | ((c as u64) << 40u64) | ((d as u64) << 32u64) | ((e as u64) << 24u64) | ((f as u64) << 16u64) | ((g as u64) << 8u64) | (h as u64);
++    assert(((w >> 22u64) & 63u64) == ((e << 2u8 | f >> 6u8) & 63u8) as u64) by (bit_vector) requires w == ((a as u64) << 56u64) | ((b as u64) << 48u64) | ((c as u64) << 40u64) | ((d as u64) << 32u64) | ((e as u64) << 24u64) | ((f as u64) << 16u64) | ((g as u64) << 8u64) | (h as u64);
++    assert(((w >> 16u64) & 63u64) == (f & 63u8) as u64) by (bit_vector) requires w == ((a as u64) << 56u64) | ((b as u64) << 48u64) | ((c as u64) << 40u64) | ((d as u64) << 32u64) | ((e as u64) << 24u64) | ((f as u64) << 16u64) | ((g as u64) << 8u64) | (h as u64);
++}
++
++proof fn encode_partial_at(x: Seq<u8>)
++    requires x.len() % 3 != 0,
++    ensures
++        crate::round_trip_spec::encoded_byte(x, 4 * (x.len()/3)) ==
++            crate::round_trip_spec::standard_symbol((x[(x.len() - x.len()%3) as int] >> 2u8) as nat),
++        x.len() % 3 == 1 ==> crate::round_trip_spec::encoded_byte(x, 4 * (x.len()/3)+1) ==
++            crate::round_trip_spec::standard_symbol(((x[(x.len() - x.len()%3) as int] << 4u8) & 63u8) as nat),
++        x.len() % 3 == 2 ==> crate::round_trip_spec::encoded_byte(x, 4 * (x.len()/3)+1) ==
++            crate::round_trip_spec::standard_symbol(((x[(x.len() - x.len()%3) as int] << 4u8 | x[(x.len() - 1) as int] >> 4u8) & 63u8) as nat),
++        x.len() % 3 == 2 ==> crate::round_trip_spec::encoded_byte(x, 4 * (x.len()/3)+2) ==
++            crate::round_trip_spec::standard_symbol(((x[(x.len() - 1) as int] << 2u8) & 63u8) as nat),
++{
++    let n = x.len();
++    let i = (n - n%3) as nat;
++    let o = 4*(n/3);
++    assert(n%3 == 1 || n%3 == 2) by (nonlinear_arith) requires n%3 != 0;
++    assert(i == 3*(n/3)) by (nonlinear_arith) requires i == n - n%3;
++    assert(o%4 == 0 && (o+1)%4 == 1 && (o+2)%4 == 2) by (nonlinear_arith) requires o == 4*(n/3);
++    assert(3*(o/4) == i && 3*((o+1)/4) == i && 3*((o+2)/4) == i) by (nonlinear_arith) requires o == 4*(n/3), i == 3*(n/3);
++    if n%3 == 1 {
++        let a = x[i as int];
++        encode_three_arithmetic(a, 0u8, 0u8);
++        assert(((a << 4u8 | 0u8 >> 4u8) & 63u8) == ((a << 4u8) & 63u8)) by (bit_vector);
++    } else {
++        let b = x[(n-1) as int];
++        encode_three_arithmetic(x[i as int], b, 0u8);
++        assert(((b << 2u8 | 0u8 >> 6u8) & 63u8) == ((b << 2u8) & 63u8)) by (bit_vector);
++    }
++}
++
++// Verification-only extraction of each original read_u64 + eight-write group.
++fn encode_eight(encode_table: &[u8; 64], input: &[u8], output: &mut [u8])
++    requires input.len() >= 8, output.len() >= 8,
++        encode_table@ == Seq::new(64, |i: int| crate::round_trip_spec::standard_symbol(i as nat)),
++    ensures
++        forall|j: int| 0 <= j < 8 ==> final(output)@[j] == crate::round_trip_spec::encoded_byte(input@, j as nat),
++        crate::round_trip_spec::suffix_unchanged(old(output)@, final(output)@, 8),
++{
++    const LOW_SIX_BITS: u64 = 0x3F;
++    let input_u64 = read_u64(&input[0..]);
++    proof { encode_word_bits(input_u64, input[0], input[1], input[2], input[3], input[4], input[5], input[6], input[7]);
++        encode_three_at(input@, 0nat, 0nat);
++        encode_three_at(input@, 3nat, 4nat);
++    }
++    
++    output[0] = encode_table[((input_u64 >> 58) & LOW_SIX_BITS) as usize];
++    proof { assert(output@[0] == crate::round_trip_spec::encoded_byte(input@, 0nat)); }
++    output[1] = encode_table[((input_u64 >> 52) & LOW_SIX_BITS) as usize];
++    proof { assert(output@[1] == crate::round_trip_spec::encoded_byte(input@, 1nat)); }
++    output[2] = encode_table[((input_u64 >> 46) & LOW_SIX_BITS) as usize];
++    proof { assert(output@[2] == crate::round_trip_spec::encoded_byte(input@, 2nat)); }
++    output[3] = encode_table[((input_u64 >> 40) & LOW_SIX_BITS) as usize];
++    proof { assert(output@[3] == crate::round_trip_spec::encoded_byte(input@, 3nat)); }
++    output[4] = encode_table[((input_u64 >> 34) & LOW_SIX_BITS) as usize];
++    proof { assert(output@[4] == crate::round_trip_spec::encoded_byte(input@, 4nat)); }
++    output[5] = encode_table[((input_u64 >> 28) & LOW_SIX_BITS) as usize];
++    proof { assert(output@[5] == crate::round_trip_spec::encoded_byte(input@, 5nat)); }
++    output[6] = encode_table[((input_u64 >> 22) & LOW_SIX_BITS) as usize];
++    proof { assert(output@[6] == crate::round_trip_spec::encoded_byte(input@, 6nat)); }
++    output[7] = encode_table[((input_u64 >> 16) & LOW_SIX_BITS) as usize];
++    proof { assert(output@[7] == crate::round_trip_spec::encoded_byte(input@, 7nat)); }
++    
++    
++    proof {
++        assert forall|j: int| 0 <= j < 8 implies
++        output@[j] == crate::round_trip_spec::encoded_byte(input@, j as nat) by { }
++    }
++}
++
++proof fn encode_window(x: Seq<u8>, i: nat, end: nat, j: nat)
++    requires i % 3 == 0, i <= end <= x.len(), j < 4*((end-i)/3),
++    ensures crate::round_trip_spec::encoded_byte(x.subrange(i as int, end as int), j) ==
++        crate::round_trip_spec::encoded_byte(x, 4*(i/3)+j),
++{
++    let o = 4*(i/3);
++    assert(i == 3*(i/3)) by (nonlinear_arith) requires i%3 == 0;
++    assert((o+j)%4 == j%4) by (nonlinear_arith) requires o == 4*(i/3);
++    assert(3*((o+j)/4) == i+3*(j/4)) by (nonlinear_arith) requires o == 4*(i/3), i == 3*(i/3);
++    assert(3*(j/4)+2 < end-i) by (nonlinear_arith) requires j < 4*((end-i)/3), i <= end;
++}
++
++// Verification-only extraction of the original four unrolled groups; calls retain their order.
++fn encode_thirtytwo(encode_table: &[u8; 64], input: &[u8], output: &mut [u8])
++    requires input.len() == 26, output.len() == 32,
++        encode_table@ == Seq::new(64, |i: int| crate::round_trip_spec::standard_symbol(i as nat)),
++    ensures
++        forall|j: int| 0 <= j < 32 ==> final(output)@[j] == crate::round_trip_spec::encoded_byte(input@, j as nat),
++        final(output)@.len() == old(output)@.len(),
++{
++    {
++        let output_block = &mut output[0..8];
++        encode_eight(encode_table, &input[0..], output_block);
++        proof {
++            assert forall|j: int| 0 <= j < 8 implies
++            output_block@[j] == crate::round_trip_spec::encoded_byte(input@, (0 + j) as nat) by {
++                encode_window(input@, 0nat, 26nat, j as nat);
++            }
++        }
++    }
++    {
++        let output_block = &mut output[8..16];
++        encode_eight(encode_table, &input[6..], output_block);
++        proof {
++            assert forall|j: int| 0 <= j < 8 implies
++            output_block@[j] == crate::round_trip_spec::encoded_byte(input@, (8 + j) as nat) by {
++                encode_window(input@, 6nat, 26nat, j as nat);
++            }
++        }
++    }
++    {
++        let output_block = &mut output[16..24];
++        encode_eight(encode_table, &input[12..], output_block);
++        proof {
++            assert forall|j: int| 0 <= j < 8 implies
++            output_block@[j] == crate::round_trip_spec::encoded_byte(input@, (16 + j) as nat) by {
++                encode_window(input@, 12nat, 26nat, j as nat);
++            }
++        }
++    }
++    {
++        let output_block = &mut output[24..32];
++        encode_eight(encode_table, &input[18..], output_block);
++        proof {
++            assert forall|j: int| 0 <= j < 8 implies
++            output_block@[j] == crate::round_trip_spec::encoded_byte(input@, (24 + j) as nat) by {
++                encode_window(input@, 18nat, 26nat, j as nat);
++            }
++        }
++    }
++    proof {
++        assert forall|j: int| 0 <= j < 32 implies
++        output@[j] == crate::round_trip_spec::encoded_byte(input@, (j) as nat) by {
++            if j < 8 { } else if j < 16 { } else if j < 24 { } else { }
++        }
++    }
++}
++
++
+ fn encode_scalar_tail(
+     encode_table: &[u8; 64],
+     input: &[u8],
+     output: &mut [u8],
+     mut input_index: usize,
+     mut output_index: usize,
+-) -> usize {
++) -> (result: usize)
++    requires
++        encode_table@ == Seq::new(64, |i: int| crate::round_trip_spec::standard_symbol(i as nat)),
++        forall|j: int| 0 <= j < output_index ==> old(output)@[j] == crate::round_trip_spec::encoded_byte(input@, j as nat),
++        crate::round_trip_spec::supported(input@.len()),
++        output.len() >= crate::encode_bridge::raw_size(input@.len()),
++        input_index <= input.len(), input_index % 3 == 0,
++        output_index == input_index / 3 * 4,
++    ensures
++        forall|j: int| 0 <= j < result ==> final(output)@[j] == crate::round_trip_spec::encoded_byte(input@, j as nat),
++        result == crate::encode_bridge::raw_size(input@.len()),
++        crate::round_trip_spec::suffix_unchanged(old(output)@, final(output)@, result as nat),
++{ 
++    let ghost before = output@;
+     const BLOCKS_PER_FAST_LOOP: usize = 4;
+     const LOW_SIX_BITS: u64 = 0x3F;
+ 
+@@ -163,7 +451,19 @@ fn encode_scalar_tail(
+     let last_fast_index = input.len().saturating_sub(BLOCKS_PER_FAST_LOOP * 6 + 2);
+ 
+     if last_fast_index > 0 {
+-        while input_index <= last_fast_index {
++        while input_index <= last_fast_index
++            invariant
++                crate::round_trip_spec::supported(input@.len()),
++                output.len() >= crate::encode_bridge::raw_size(input@.len()),
++                input_index <= input.len(), input_index % 3 == 0,
++                output_index == input_index / 3 * 4,
++                last_fast_index == input.len() - 26,
++                encode_table@ == Seq::new(64, |i: int| crate::round_trip_spec::standard_symbol(i as nat)),
++                forall|j: int| 0 <= j < output_index ==> output@[j] == crate::round_trip_spec::encoded_byte(input@, j as nat),
++                output@.len() == before.len(),
++                forall|j: int| output_index <= j < output@.len() ==> output@[j] == before[j],
++            decreases input.len() - input_index,
++        {
+             // Major performance wins from letting the optimizer do the bounds check once, mostly
+             // on the output side
+             let input_chunk = &input[input_index..(input_index + (BLOCKS_PER_FAST_LOOP * 6 + 2))];
+@@ -177,50 +477,13 @@ fn encode_scalar_tail(
+             // Plus, single-digit percentage performance differences might well be quite different
+             // on different hardware.
+ 
+-            let input_u64 = read_u64(&input_chunk[0..]);
+-
+-            output_chunk[0] = encode_table[((input_u64 >> 58) & LOW_SIX_BITS) as usize];
+-            output_chunk[1] = encode_table[((input_u64 >> 52) & LOW_SIX_BITS) as usize];
+-            output_chunk[2] = encode_table[((input_u64 >> 46) & LOW_SIX_BITS) as usize];
+-            output_chunk[3] = encode_table[((input_u64 >> 40) & LOW_SIX_BITS) as usize];
+-            output_chunk[4] = encode_table[((input_u64 >> 34) & LOW_SIX_BITS) as usize];
+-            output_chunk[5] = encode_table[((input_u64 >> 28) & LOW_SIX_BITS) as usize];
+-            output_chunk[6] = encode_table[((input_u64 >> 22) & LOW_SIX_BITS) as usize];
+-            output_chunk[7] = encode_table[((input_u64 >> 16) & LOW_SIX_BITS) as usize];
+-
+-            let input_u64 = read_u64(&input_chunk[6..]);
+-
+-            output_chunk[8] = encode_table[((input_u64 >> 58) & LOW_SIX_BITS) as usize];
+-            output_chunk[9] = encode_table[((input_u64 >> 52) & LOW_SIX_BITS) as usize];
+-            output_chunk[10] = encode_table[((input_u64 >> 46) & LOW_SIX_BITS) as usize];
+-            output_chunk[11] = encode_table[((input_u64 >> 40) & LOW_SIX_BITS) as usize];
+-            output_chunk[12] = encode_table[((input_u64 >> 34) & LOW_SIX_BITS) as usize];
+-            output_chunk[13] = encode_table[((input_u64 >> 28) & LOW_SIX_BITS) as usize];
+-            output_chunk[14] = encode_table[((input_u64 >> 22) & LOW_SIX_BITS) as usize];
+-            output_chunk[15] = encode_table[((input_u64 >> 16) & LOW_SIX_BITS) as usize];
+-
+-            let input_u64 = read_u64(&input_chunk[12..]);
+-
+-            output_chunk[16] = encode_table[((input_u64 >> 58) & LOW_SIX_BITS) as usize];
+-            output_chunk[17] = encode_table[((input_u64 >> 52) & LOW_SIX_BITS) as usize];
+-            output_chunk[18] = encode_table[((input_u64 >> 46) & LOW_SIX_BITS) as usize];
+-            output_chunk[19] = encode_table[((input_u64 >> 40) & LOW_SIX_BITS) as usize];
+-            output_chunk[20] = encode_table[((input_u64 >> 34) & LOW_SIX_BITS) as usize];
+-            output_chunk[21] = encode_table[((input_u64 >> 28) & LOW_SIX_BITS) as usize];
+-            output_chunk[22] = encode_table[((input_u64 >> 22) & LOW_SIX_BITS) as usize];
+-            output_chunk[23] = encode_table[((input_u64 >> 16) & LOW_SIX_BITS) as usize];
+-
+-            let input_u64 = read_u64(&input_chunk[18..]);
+-
+-            output_chunk[24] = encode_table[((input_u64 >> 58) & LOW_SIX_BITS) as usize];
+-            output_chunk[25] = encode_table[((input_u64 >> 52) & LOW_SIX_BITS) as usize];
+-            output_chunk[26] = encode_table[((input_u64 >> 46) & LOW_SIX_BITS) as usize];
+-            output_chunk[27] = encode_table[((input_u64 >> 40) & LOW_SIX_BITS) as usize];
+-            output_chunk[28] = encode_table[((input_u64 >> 34) & LOW_SIX_BITS) as usize];
+-            output_chunk[29] = encode_table[((input_u64 >> 28) & LOW_SIX_BITS) as usize];
+-            output_chunk[30] = encode_table[((input_u64 >> 22) & LOW_SIX_BITS) as usize];
+-            output_chunk[31] = encode_table[((input_u64 >> 16) & LOW_SIX_BITS) as usize];
+-
++            encode_thirtytwo(encode_table, input_chunk, output_chunk);
++            proof {
++                assert forall|j: int| 0 <= j < 32 implies
++                    output_chunk@[j] == crate::round_trip_spec::encoded_byte(input@, (output_index + j) as nat) by {
++                    encode_window(input@, input_index as nat, (input_index + 26) as nat, j as nat);
++                }
++            }
+             output_index += BLOCKS_PER_FAST_LOOP * 8;
+             input_index += BLOCKS_PER_FAST_LOOP * 6;
+         }
+@@ -235,10 +498,25 @@ fn encode_scalar_tail(
+ 
+     // start at the first index not handled by fast loop, which may be 0.
+ 
+-    while input_index < start_of_rem {
++    while input_index < start_of_rem
++        invariant
++            crate::round_trip_spec::supported(input@.len()),
++            output.len() >= crate::encode_bridge::raw_size(input@.len()),
++            input_index <= start_of_rem, input_index % 3 == 0,
++            output_index == input_index / 3 * 4,
++            rem == input.len() % 3,
++            start_of_rem == input.len() - rem, start_of_rem % 3 == 0,
++            encode_table@ == Seq::new(64, |i: int| crate::round_trip_spec::standard_symbol(i as nat)),
++            forall|j: int| 0 <= j < output_index ==> output@[j] == crate::round_trip_spec::encoded_byte(input@, j as nat),
++            output@.len() == before.len(),
++            forall|j: int| output_index <= j < output@.len() ==> output@[j] == before[j],
++        decreases start_of_rem - input_index,
++    {
++        proof { encode_index_bounds(); }
+         let input_chunk = &input[input_index..(input_index + 3)];
+         let output_chunk = &mut output[output_index..(output_index + 4)];
+ 
++        proof { encode_three_at(input@, input_index as nat, output_index as nat); }
+         output_chunk[0] = encode_table[(input_chunk[0] >> 2) as usize];
+         output_chunk[1] =
+             encode_table[((input_chunk[0] << 4 | input_chunk[1] >> 4) & LOW_SIX_BITS_U8) as usize];
+@@ -246,10 +524,16 @@ fn encode_scalar_tail(
+             encode_table[((input_chunk[1] << 2 | input_chunk[2] >> 6) & LOW_SIX_BITS_U8) as usize];
+         output_chunk[3] = encode_table[(input_chunk[2] & LOW_SIX_BITS_U8) as usize];
+ 
++        proof {
++            assert forall|j: int| 0 <= j < 4 implies
++                output_chunk@[j] == crate::round_trip_spec::encoded_byte(input@, (output_index + j) as nat) by { }
++        }
+         input_index += 3;
+         output_index += 4;
+     }
+ 
++    proof { encode_index_bounds(); }
++    proof { if rem != 0 { encode_partial_at(input@); } }
+     if rem == 2 {
+         output[output_index] = encode_table[(input[start_of_rem] >> 2) as usize];
+         output[output_index + 1] = encode_table[((input[start_of_rem] << 4
+@@ -268,14 +552,23 @@ fn encode_scalar_tail(
+     output_index
+ }
+ 
++}
++
+ /// Returns a table mapping a 6-bit index to the ASCII byte encoding of the index
+-pub(crate) const fn encode_table(alphabet: &Alphabet) -> [u8; 64] {
++vstd::prelude::verus! {
++pub(crate) const fn encode_table(alphabet: &Alphabet) -> (result: [u8; 64])
++ ensures result@ == alphabet.symbols@,
++    {
+     // the encode table is just the alphabet:
+     // 6-bit index lookup -> printable byte
+     let mut encode_table = [0_u8; 64];
+     {
+         let mut index = 0;
+-        while index < 64 {
++        while index < 64
++            invariant index <= 64,
++                forall|j: int| 0 <= j < index ==> encode_table@[j] == alphabet.symbols@[j],
++            decreases 64 - index,
++        {
+             encode_table[index] = alphabet.symbols[index];
+             index += 1;
+         }
+@@ -283,29 +576,66 @@ pub(crate) const fn encode_table(alphabet: &Alphabet) -> [u8; 64] {
+ 
+     encode_table
+ }
++}
+ 
+ /// Returns a table mapping base64 bytes as the lookup index to either:
+ /// - [`INVALID_VALUE`] for bytes that aren't members of the alphabet
+ /// - a byte whose lower 6 bits are the value that was encoded into the index byte
+-pub(crate) const fn decode_table(alphabet: &Alphabet) -> [u8; 256] {
++vstd::prelude::verus! {
++pub(crate) const fn decode_table(alphabet: &Alphabet) -> (result: [u8; 256])
++
++    ensures distinct(alphabet.bytes()) ==> forall|i: int| 0 <= i < 64 ==> result@[alphabet.symbols@[i] as int] == i as u8,
++
++    {
++    proof { alphabet.representation(); }
+     let mut decode_table = [INVALID_VALUE; 256];
+ 
+     // Since the table is full of `INVALID_VALUE` already, we only need to overwrite
+     // the parts that are valid.
+     let mut index = 0_usize;
+-    while index < 64 {
++    while index < 64
++        invariant index <= 64, alphabet.bytes() == alphabet.symbols@,
++            distinct(alphabet.bytes()) ==> forall|j: int| 0 <= j < index ==> decode_table@[alphabet.symbols@[j] as int] == j as u8,
++        decreases 64 - index,
++    {
+         // The index in the alphabet is the 6-bit value we care about.
+         // Since the index is in 0-63, it is safe to cast to u8.
++        let ghost previous = decode_table@;
+         decode_table[alphabet.symbols[index] as usize] = index as u8;
++        proof {
++            assert forall|j: int| 0 <= j < index + 1 && distinct(alphabet.bytes()) implies
++                decode_table@[alphabet.symbols@[j] as int] == j as u8 by {
++                if j != index {
++                    assert(alphabet.symbols@[j] != alphabet.symbols@[index as int]);
++                    assert(previous[alphabet.symbols@[j] as int] == j as u8);
++                }
++            }
++        }
+         index += 1;
+     }
+ 
+     decode_table
+ }
++}
+ 
++verus! {
+ #[inline]
+-fn read_u64(s: &[u8]) -> u64 {
+-    u64::from_be_bytes(s[..8].try_into().unwrap())
++pub(crate) open spec fn be_word(s: Seq<u8>) -> u64 {
++    ((s[0] as u64) << 56) | ((s[1] as u64) << 48)
++    | ((s[2] as u64) << 40) | ((s[3] as u64) << 32)
++    | ((s[4] as u64) << 24) | ((s[5] as u64) << 16)
++    | ((s[6] as u64) << 8) | (s[7] as u64)
++}
++fn read_u64(s: &[u8]) -> (result: u64)
++    requires s.len() >= 8,
++    ensures result == be_word(s@),
++{
++    // Verification-only expansion of from_be_bytes on the first eight bytes.
++    ((s[0] as u64) << 56) | ((s[1] as u64) << 48)
++    | ((s[2] as u64) << 40) | ((s[3] as u64) << 32)
++    | ((s[4] as u64) << 24) | ((s[5] as u64) << 16)
++    | ((s[6] as u64) << 8) | (s[7] as u64)
++}
+ }
+ 
+ /// Contains configuration parameters for base64 encoding and decoding.
+@@ -321,6 +651,7 @@ fn read_u64(s: &[u8]) -> u64 {
+ ///
+ /// To specify the characters used, see [Alphabet].
+ #[derive(Clone, Copy, Debug)]
++#[verifier::verify]
+ pub struct GeneralPurposeConfig {
+     encode_padding: bool,
+     decode_allow_trailing_bits: bool,
+@@ -334,14 +665,7 @@ impl GeneralPurposeConfig {
+     /// This probably matches most people's expectations, but consider disabling padding to save
+     /// a few bytes unless you specifically need it for compatibility with some legacy system.
+     #[must_use]
+-    pub const fn new() -> Self {
+-        Self {
+-            // RFC states that padding must be applied by default
+-            encode_padding: true,
+-            decode_allow_trailing_bits: false,
+-            decode_padding_mode: DecodePaddingMode::RequireCanonical,
+-        }
+-    }
++
+ 
+     /// Create a new config based on `self` with an updated `padding` setting.
+     ///
+@@ -405,11 +729,17 @@ impl Default for GeneralPurposeConfig {
+     }
+ }
+ 
++verus! {
++#[verifier::verify]
+ impl Config for GeneralPurposeConfig {
+-    fn encode_padding(&self) -> bool {
++    closed spec fn padding_enabled(&self) -> bool { self.encode_padding }
++    fn encode_padding(&self) -> (result: bool)
++        ensures result == self.padding_enabled(),
++    {
+         self.encode_padding
+     }
+ }
++}
+ 
+ #[cfg(all(
+     feature = "simd-unsafe",
+@@ -433,7 +763,14 @@ impl GeneralPurposeConfig {
+ /// A [`GeneralPurpose`] engine using the [`alphabet::STANDARD`] base64 alphabet and [`PAD`] config.
+ ///
+ /// Does not allow trailing bits when decoding.
+-pub const STANDARD: GeneralPurpose = GeneralPurpose::new(&alphabet::STANDARD, PAD);
++vstd::prelude::verus! {
++/// The canonical STANDARD initializer, with checked representation guarantees.
++pub exec const STANDARD: GeneralPurpose 
++ ensures crate::engine::Engine::is_standard(&STANDARD)
++ {
++    GeneralPurpose::new(&alphabet::STANDARD, PAD)
++ }
++}
+ 
+ /// A [`GeneralPurpose`] engine using the [`alphabet::STANDARD`] base64 alphabet and
+ /// [`PAD_INDIFFERENT`] config.
+@@ -484,7 +821,12 @@ pub const URL_SAFE_NO_PAD_INDIFFERENT: GeneralPurpose =
+ ///
+ /// This is the standard per the base64 RFC, but consider using [`NO_PAD`] or [`NO_PAD_INDIFFERENT`]
+ /// instead as padding serves little purpose in practice.
+-pub const PAD: GeneralPurposeConfig = GeneralPurposeConfig::new();
++vstd::prelude::verus! {
++/// Canonical padding configuration.
++pub exec const PAD: GeneralPurposeConfig 
++ ensures PAD.canonical()
++ { GeneralPurposeConfig::new() }
++}
+ 
+ /// Include padding bytes when encoding, but allow input with or without padding when decoding.
+ ///
+@@ -506,3 +848,71 @@ pub const NO_PAD: GeneralPurposeConfig = GeneralPurposeConfig::new()
+ pub const NO_PAD_INDIFFERENT: GeneralPurposeConfig = GeneralPurposeConfig::new()
+     .with_encode_padding(false)
+     .with_decode_padding_mode(DecodePaddingMode::Indifferent);
++
++vstd::prelude::verus! {
++impl GeneralPurpose {
++    /// Concrete representation produced by the actual initializer.
++    pub closed spec fn initialized_from(&self, alphabet: &Alphabet, config: GeneralPurposeConfig) -> bool {
++        self.encode_table@ == alphabet.bytes() && self.padding == alphabet.pad() && self.config == config
++        && (distinct(alphabet.bytes()) ==> forall|i: int| 0 <= i < 64 ==> self.decode_table@[alphabet.bytes()[i] as int] == i as u8)
++    }
++
++    /// Create a `GeneralPurpose` engine from an [Alphabet].
++    ///
++    /// While not very expensive to initialize, ideally these should be cached
++    /// if the engine will be used repeatedly.
++    #[must_use]
++    pub const fn new(alphabet: &Alphabet, config: GeneralPurposeConfig) -> (result: Self)
++
++        ensures result.initialized_from(alphabet, config),
++    
++    {
++        proof { alphabet.representation(); }
++        Self {
++            encode_table: encode_table(alphabet),
++            decode_table: decode_table(alphabet),
++            padding: alphabet.padding,
++            config,
++        }
++    }
++    }
++}
++
++vstd::prelude::verus! {
++impl GeneralPurposeConfig {
++    /// Canonical PAD configuration predicate.
++    pub closed spec fn canonical(&self) -> bool {
++        self.encode_padding && !self.decode_allow_trailing_bits && self.decode_padding_mode == DecodePaddingMode::RequireCanonical
++    }
++    /// Create the canonical padding configuration.
++    #[must_use]
++    pub const fn new() -> (result: Self)
++
++        ensures result.canonical(),
++    
++    {
++        Self {
++            // RFC states that padding must be applied by default
++            encode_padding: true,
++            decode_allow_trailing_bits: false,
++            decode_padding_mode: DecodePaddingMode::RequireCanonical,
++        }
++    }
++    }
++}
++
++verus! {
++/// Pairwise distinct alphabet symbols.
++    pub open spec fn distinct(bytes: Seq<u8>) -> bool {
++    forall|i: int, j: int| 0 <= i < bytes.len() && 0 <= j < bytes.len() && i != j ==> bytes[i] != bytes[j]
++}
++}
++
++verus! {
++/// Checked caller use of the publicly selected constant; no readiness precondition.
++#[allow(dead_code)]
++fn standard_initialization_use() {
++    let selected = STANDARD;
++    assert(crate::engine::Engine::is_standard(&selected));
++}
++}
+diff --git a/src/engine/mod.rs b/src/engine/mod.rs
+index a7c2776..7ac50b5 100644
+--- a/src/engine/mod.rs
++++ b/src/engine/mod.rs
+@@ -1,5 +1,8 @@
+ //! Provides the [Engine] abstraction and out of the box implementations.
++#[allow(unused_imports)]
++use vstd::prelude::*;
+ use crate::alphabet::Symbol;
++use crate::as_ref_spec::AsRefSpec;
+ #[cfg(any(feature = "alloc", test))]
+ use crate::chunked_encoder;
+ use crate::{
+@@ -54,6 +57,7 @@ pub use simd::Avx2;
+ ))]
+ pub use simd::Neon;
+ 
++verus! {
+ /// An `Engine` provides low-level encoding and decoding operations that all other higher-level parts of the API use. Users of the library will generally not need to implement this.
+ ///
+ /// Different implementations offer different characteristics. The library currently ships with
+@@ -69,7 +73,10 @@ pub use simd::Neon;
+ // - add an implementation of [engine::tests::EngineWrapper]
+ // - add the implementation to the `all_engines` macro
+ // All tests run on all engines listed in the macro.
++#[verifier::verify]
+ pub trait Engine: Send + Sync {
++    /// True exactly for the selected STANDARD representation (lower construction obligation).
++    spec fn is_standard(&self) -> bool;
+     /// The config type used by this engine
+     type Config: Config;
+     /// The decode estimate used by this engine
+@@ -88,7 +95,14 @@ pub trait Engine: Send + Sync {
+     ///
+     /// Must not write any bytes into the output slice other than the encoded data.
+     #[doc(hidden)]
+-    fn internal_encode(&self, input: &[u8], output: &mut [u8]) -> usize;
++    fn internal_encode(&self, input: &[u8], output: &mut [u8]) -> (result: usize)
++        requires self.is_standard(), crate::round_trip_spec::encode_requires(input@, old(output)@),
++        ensures
++            result == crate::encode_bridge::raw_size(input@.len()),
++            crate::round_trip_spec::suffix_unchanged(old(output)@, final(output)@, result as nat),
++            final(output)@.subrange(0, result as int) ==
++                crate::round_trip_spec::standard_encoding(input@).subrange(0, result as int),
++    ;
+ 
+     /// This is not meant to be called directly; it is only for `Engine` implementors.
+     ///
+@@ -96,7 +110,10 @@ pub trait Engine: Send + Sync {
+     /// sometimes helpful to have a conservative estimate of the decoded size before doing the
+     /// decoding, so this calculation is done separately and passed to [Engine::decode()] as needed.
+     #[doc(hidden)]
+-    fn internal_decoded_len_estimate(&self, input_len: usize) -> Self::DecodeEstimate;
++    fn internal_decoded_len_estimate(&self, input_len: usize) -> (result: Self::DecodeEstimate)
++        ensures result.compatible_with(input_len as nat),
++            self.is_standard() ==> result.estimated_len() == crate::round_trip_spec::decoded_estimate(input_len as nat),
++    ;
+ 
+     /// This is not meant to be called directly; it is only for `Engine` implementors.
+     /// See the other `decode*` functions on this trait.
+@@ -122,10 +139,20 @@ pub trait Engine: Send + Sync {
+         input: &[u8],
+         output: &mut [u8],
+         decode_estimate: Self::DecodeEstimate,
+-    ) -> Result<DecodeMetadata, DecodeSliceError>;
++    ) -> (result: Result<DecodeMetadata, DecodeSliceError>)
++        requires decode_estimate.compatible_with(input@.len()),
++        ensures
++            self.is_standard() && decode_estimate.estimated_len() == crate::round_trip_spec::decoded_estimate(input@.len())
++                && crate::round_trip_spec::round_trip_decode_requires(input@, old(output)@) ==>
++                match result {
++                    Ok(dm) => crate::round_trip_spec::round_trip_decode_contract(input@, input@, old(output)@, final(output)@, Ok::<usize, DecodeSliceError>(dm.written())),
++                    Err(_) => false,
++                },
++    ;
+ 
+     /// Returns the config for this engine.
+-    fn config(&self) -> &Self::Config;
++    fn config(&self) -> (result: &Self::Config)
++        ensures self.is_standard() ==> result.padding_enabled();
+ 
+     /// Encode arbitrary octets as base64 using the provided `Engine`.
+     /// Returns a `String`.
+@@ -145,6 +172,7 @@ pub trait Engine: Send + Sync {
+     /// ```
+     #[cfg(any(feature = "alloc", test))]
+     #[inline]
++    #[verifier::external_body]
+     fn encode<T: AsRef<[u8]>>(&self, input: T) -> String {
+         fn inner<E>(engine: &E, input_bytes: &[u8]) -> String
+         where
+@@ -185,6 +213,7 @@ pub trait Engine: Send + Sync {
+     /// ```
+     #[cfg(any(feature = "alloc", test))]
+     #[inline]
++    #[verifier::external_body]
+     fn encode_string<T: AsRef<[u8]>>(&self, input: T, output_buf: &mut String) {
+         fn inner<E>(engine: &E, input_bytes: &[u8], output_buf: &mut String)
+         where
+@@ -224,34 +253,74 @@ pub trait Engine: Send + Sync {
+     /// assert_eq!(s, general_purpose::STANDARD.decode(&buf).unwrap().as_slice());
+     /// ```
+     #[inline]
++    #[verus_spec(result =>
++        with -> observation: Ghost<(Seq<u8>, Seq<u8>)>
++        requires self.is_standard(),
++        ensures
++            crate::as_ref_spec::returned_bytes(&input, observation@.0),
++            observation@.1 == old(output_buf)@,
++            self.is_standard() && crate::round_trip_spec::encode_requires(observation@.0, observation@.1) ==>
++                crate::round_trip_spec::encode_contract(observation@.0, observation@.0, observation@.1, final(output_buf)@, result),
++    )]
+     fn encode_slice<T: AsRef<[u8]>>(
+         &self,
+         input: T,
+         output_buf: &mut [u8],
+     ) -> Result<usize, EncodeSliceError> {
+-        fn inner<E>(
+-            engine: &E,
+-            input_bytes: &[u8],
+-            output_buf: &mut [u8],
+-        ) -> Result<usize, EncodeSliceError>
+-        where
+-            E: Engine + ?Sized,
+-        {
+-            let encoded_size = encoded_len(input_bytes.len(), engine.config().encode_padding())
+-                .expect("usize overflow when calculating buffer size");
+-
+-            if output_buf.len() < encoded_size {
+-                return Err(EncodeSliceError::OutputSliceTooSmall);
++        let input_bytes = as_ref_bytes(&input);
++        let ghost input_snapshot = input_bytes@;
++        let ghost output_snapshot = output_buf@;
++        proof {
++            crate::as_ref_spec::byte_slice_valid(input_bytes);
++            crate::as_ref_spec::byte_slice_valid(output_buf);
++        }
++        let encoded_size = encoded_len(input_bytes.len(), self.config().encode_padding())
++            .expect("usize overflow when calculating buffer size");
++        proof {
++            if self.is_standard() && crate::round_trip_spec::encode_requires(input_snapshot, output_snapshot) {
++                assert(encoded_size == crate::round_trip_spec::encoded_size(input_snapshot.len()));
++                assert(output_buf@.len() >= encoded_size);
++            }
++        }
++        let result = if output_buf.len() < encoded_size {
++            Err(EncodeSliceError::OutputSliceTooSmall)
++        } else {
++            proof {
++                crate::round_trip_proof::capacity_domain(input_snapshot.len(), crate::round_trip_spec::byte_slice_max());
++                assert(crate::round_trip_spec::supported(input_snapshot.len()));
++                crate::encode_bridge::raw_capacity(input_snapshot.len());
+             }
+-
+             let b64_output = &mut output_buf[0..encoded_size];
+-
+-            encode_with_padding(input_bytes, b64_output, engine, encoded_size);
+-
++            let ghost b64_before = b64_output@;
++            proof {
++                if self.is_standard() && crate::round_trip_spec::encode_requires(input_snapshot, output_snapshot) {
++                    assert(crate::round_trip_spec::encode_requires(input_snapshot, b64_before));
++                }
++            }
++            // Behavior-preserving expansion of encode_with_padding at its actual caller.
++            debug_assert_eq!(encoded_size, b64_output.len());
++            let b64_bytes_written = self.internal_encode(input_bytes, b64_output);
++            let padding_bytes = if self.config().encode_padding() {
++                crate::encode::add_padding(
++                    b64_bytes_written,
++                    self.padding(),
++                    &mut b64_output[b64_bytes_written..],
++                )
++            } else {
++                0
++            };
++            let encoded_bytes = b64_bytes_written.checked_add(padding_bytes)
++                .expect("usize overflow when calculating b64 length");
++            debug_assert_eq!(encoded_size, encoded_bytes);
++            proof {
++                if self.is_standard() && crate::round_trip_spec::encode_requires(input_snapshot, output_snapshot) {
++                    assert(b64_output@ == crate::round_trip_spec::standard_encoding(input_snapshot));
++                }
++            }
+             Ok(encoded_size)
+-        }
+-
+-        inner(self, input.as_ref(), output_buf)
++        };
++        proof_with!(|= Ghost((input_snapshot, output_snapshot)));
++        result
+     }
+ 
+     /// Decode the input into a new `Vec`.
+@@ -274,6 +343,7 @@ pub trait Engine: Send + Sync {
+     /// ```
+     #[cfg(any(feature = "alloc", test))]
+     #[inline]
++    #[verifier::external_body]
+     fn decode<T: AsRef<[u8]>>(&self, input: T) -> Result<Vec<u8>, DecodeError> {
+         fn inner<E>(engine: &E, input_bytes: &[u8]) -> Result<Vec<u8>, DecodeError>
+         where
+@@ -332,6 +402,7 @@ pub trait Engine: Send + Sync {
+     /// ```
+     #[cfg(any(feature = "alloc", test))]
+     #[inline]
++    #[verifier::external_body]
+     fn decode_vec<T: AsRef<[u8]>>(
+         &self,
+         input: T,
+@@ -383,29 +454,35 @@ pub trait Engine: Send + Sync {
+     /// See [`Engine::decode_slice_unchecked`] for a version that panics instead of returning an error
+     /// if the output buffer is too small.
+     #[inline]
++    #[verus_spec(result =>
++        with -> observation: Ghost<(Seq<u8>, Seq<u8>)>
++        ensures
++            crate::as_ref_spec::returned_bytes(&input, observation@.0),
++            observation@.1 == old(output)@,
++            self.is_standard() && crate::round_trip_spec::round_trip_decode_requires(observation@.0, observation@.1) ==>
++                crate::round_trip_spec::round_trip_decode_contract(observation@.0, observation@.0, observation@.1, final(output)@, result),
++    )]
+     fn decode_slice<T: AsRef<[u8]>>(
+         &self,
+         input: T,
+         output: &mut [u8],
+-    ) -> Result<usize, DecodeSliceError> {
+-        fn inner<E>(
+-            engine: &E,
+-            input_bytes: &[u8],
+-            output: &mut [u8],
+-        ) -> Result<usize, DecodeSliceError>
+-        where
+-            E: Engine + ?Sized,
+-        {
+-            engine
+-                .internal_decode(
+-                    input_bytes,
+-                    output,
+-                    engine.internal_decoded_len_estimate(input_bytes.len()),
+-                )
+-                .map(|dm| dm.decoded_len)
+-        }
+-
+-        inner(self, input.as_ref(), output)
++    ) -> Result<usize, DecodeSliceError>
++    {
++        let input_bytes = as_ref_bytes(&input);
++        let ghost encoded_snapshot = input_bytes@;
++        let ghost output_snapshot = output@;
++        let decoded = self
++            .internal_decode(
++                input_bytes,
++                output,
++                self.internal_decoded_len_estimate(input_bytes.len()),
++            );
++        let result = match decoded {
++            Ok(dm) => Ok(dm.decoded_len),
++            Err(error) => Err(error),
++        };
++        proof_with!(|= Ghost((encoded_snapshot, output_snapshot)));
++        result
+     }
+ 
+     /// Decode the input into the provided output slice.
+@@ -423,6 +500,7 @@ pub trait Engine: Send + Sync {
+     ///
+     /// Panics if the provided output buffer is too small for the decoded data.
+     #[inline]
++    #[verifier::external_body]
+     fn decode_slice_unchecked<T: AsRef<[u8]>>(
+         &self,
+         input: T,
+@@ -453,11 +531,20 @@ pub trait Engine: Send + Sync {
+     /// Returns the symbol used for encode padding.
+     ///
+     /// Typically this is `'='`, but weird alphabets may use other values.
+-    fn padding(&self) -> Symbol;
++    fn padding(&self) -> (result: Symbol)
++        ensures self.is_standard() ==> result.byte() == 61u8,
++    ;
++}
++
+ }
+ 
+ /// The minimal level of configuration that engines must support.
++verus! {
++/// Minimal configuration with a ghost padding observation.
++#[verifier::verify]
+ pub trait Config {
++    /// Ghost observation of the actual padding configuration.
++    spec fn padding_enabled(&self) -> bool;
+     /// Returns `true` if padding should be added after the encoded output.
+     ///
+     /// Padding is added outside the engine's `encode()` since the engine may be used
+@@ -466,7 +553,10 @@ pub trait Config {
+     // It could be provided as a separate parameter when encoding, but that feels like
+     // leaking an implementation detail to the user, and it's hopefully more convenient
+     // to have to only pass one thing (the engine) to any part of the API.
+-    fn encode_padding(&self) -> bool;
++    fn encode_padding(&self) -> (result: bool)
++        ensures result == self.padding_enabled();
++}
++
+ }
+ 
+ /// The decode estimate used by an engine implementation. Users do not need to interact with this;
+@@ -474,13 +564,24 @@ pub trait Config {
+ ///
+ /// Implementors may store relevant data here when constructing this to avoid having to calculate
+ /// them again during actual decoding.
++verus! {
++/// Numeric observation of an engine's conservative decode estimate.
++#[verifier::verify]
+ pub trait DecodeEstimate {
++    /// Ghost numeric observation of the actual estimate.
++    spec fn estimated_len(&self) -> nat;
++    /// The estimate has the remainder and capacity computed for this input length.
++    spec fn compatible_with(&self, input_len: nat) -> bool;
+     /// Returns a conservative (err on the side of too big) estimate of the decoded length to use
+     /// for pre-allocating buffers, etc.
+     ///
+     /// The estimate must be no larger than the next largest complete triple of decoded bytes.
+     /// That is, the final quad of symbols to decode may be assumed to be complete with no padding.
+-    fn decoded_len_estimate(&self) -> usize;
++    fn decoded_len_estimate(&self) -> (result: usize)
++        ensures result as nat == self.estimated_len(),
++    ;
++}
++
+ }
+ 
+ /// Controls how pad bytes are handled when decoding.
+@@ -488,6 +589,7 @@ pub trait DecodeEstimate {
+ /// Each [Engine] must support at least the behavior indicated by
+ /// [`DecodePaddingMode::RequireCanonical`], and may support other modes.
+ #[derive(Clone, Copy, Debug, PartialEq, Eq)]
++#[verifier::verify]
+ pub enum DecodePaddingMode {
+     /// Canonical padding is allowed, but any fewer padding bytes than that is also allowed.
+     Indifferent,
+@@ -499,6 +601,7 @@ pub enum DecodePaddingMode {
+ 
+ /// Metadata about the result of a decode operation
+ #[derive(PartialEq, Eq, Debug)]
++#[verifier::verify]
+ pub struct DecodeMetadata {
+     /// Number of decoded bytes output
+     pub(crate) decoded_len: usize,
+@@ -506,11 +609,29 @@ pub struct DecodeMetadata {
+     pub(crate) padding_offset: Option<usize>,
+ }
+ 
++verus! {
+ impl DecodeMetadata {
+-    pub(crate) fn new(decoded_bytes: usize, padding_index: Option<usize>) -> Self {
++    pub(crate) fn new(decoded_bytes: usize, padding_index: Option<usize>) -> (result: Self)
++        ensures result.decoded_len == decoded_bytes, result.padding_offset == padding_index,
++    {
+         Self {
+             decoded_len: decoded_bytes,
+             padding_offset: padding_index,
+         }
+     }
+ }
++}
++
++// Verification-only extraction of the single external user conversion call.
++#[verifier::verify]
++#[verus_spec(result => ensures AsRefSpec::as_ref_post(input, result))]
++fn as_ref_bytes<T: AsRef<[u8]>>(input: &T) -> &[u8] {
++    <T as AsRef<[u8]>>::as_ref(input)
++}
++
++verus! {
++impl DecodeMetadata {
++    /// Decoded-length observation used by the internal decode contract.
++    pub closed spec fn written(&self) -> usize { self.decoded_len }
++}
++}
+diff --git a/src/lib.rs b/src/lib.rs
+index 3fbf86b..6145a94 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -29,6 +29,8 @@
+ //! in the [`prelude`] module as shown here, if you prefer a minimal `use`
+ //! footprint.
+ //!
++#![feature(sized_hierarchy)]
++#![feature(panic_internals)]
+ #![cfg_attr(feature = "alloc", doc = "```")]
+ #![cfg_attr(not(feature = "alloc"), doc = "```ignore")]
+ //! use base64::prelude::*;
+@@ -278,10 +280,10 @@
+     unused_results,
+     variant_size_differences
+ )]
+-// The `simd-unsafe` feature (on by default) is the only source of `unsafe`; without it the crate
+-// is `#![forbid(unsafe_code)]`. When it is enabled, `unsafe` is confined to the SIMD engine module,
+-// which opts back in with a localized `allow`.
+-#![cfg_attr(not(feature = "simd-unsafe"), forbid(unsafe_code))]
++// Production forbids unsafe code when SIMD is disabled. This verification overlay denies it,
++// allowing only the panic-interface module's macro-generated unsafe specification scaffolding.
++// That scaffolding erases before executable compilation. SIMD remains disabled for this route.
++#![cfg_attr(not(feature = "simd-unsafe"), deny(unsafe_code))]
+ #![cfg_attr(feature = "simd-unsafe", deny(unsafe_code))]
+ #![cfg_attr(not(any(feature = "std", test)), no_std)]
+ 
+@@ -318,3 +320,23 @@ pub mod prelude;
+ 
+ #[cfg(test)]
+ mod tests;
++
++#[allow(unused_imports)]
++use vstd::prelude::*;
++
++#[allow(missing_docs)]
++pub mod round_trip_spec;
++
++/// Verification interfaces for the actual external AsRef invocation.
++pub mod as_ref_spec;
++
++/// Source-grounded public usage checks.
++pub mod round_trip_use;
++
++mod panic_spec;
++
++/// Raw encoding composition lemmas used by the actual public wrapper.
++pub mod encode_bridge;
++/// Accepted capacity and composition support consumed by executable callers.
++#[allow(missing_docs)]
++pub mod round_trip_proof;
+diff --git a/src/panic_spec.rs b/src/panic_spec.rs
+new file mode 100644
+index 0000000..b33d2b1
+--- /dev/null
++++ b/src/panic_spec.rs
+@@ -0,0 +1,13 @@
++//! Debug assertion failure is an unreachable panic boundary, never a trusted success path.
++#![allow(unsafe_code)]
++use vstd::prelude::*;
++verus! {
++#[verifier::external_type_specification]
++pub struct ExAssertKind(core::panicking::AssertKind);
++pub assume_specification<T, U> [core::panicking::assert_failed]
++(kind: core::panicking::AssertKind, left: &T, right: &U, args: Option<core::fmt::Arguments<'_>>) -> !
++where T: core::marker::MetaSized + core::fmt::Debug + ?Sized,
++      U: core::marker::MetaSized + core::fmt::Debug + ?Sized,
++    requires false,
++;
++}
+diff --git a/src/round_trip_proof.rs b/src/round_trip_proof.rs
+new file mode 100644
+index 0000000..a68e60c
+--- /dev/null
++++ b/src/round_trip_proof.rs
+@@ -0,0 +1,146 @@
++//! Capacity lemmas, separate from caller-visible meaning.
++use vstd::prelude::*;
++use crate::round_trip_spec::*;
++verus! {
++pub proof fn capacity_domain(n: nat, s: nat)
++    ensures
++        (n <= 3 * (s / 4)) == (encoded_size(n) <= s),
++        n <= encoded_size(n),
++        decoded_estimate(encoded_size(n)) == 3 * groups(n),
++        n <= decoded_estimate(encoded_size(n)) <= n + 2,
++{
++    assert(n == 3 * (n / 3) + n % 3) by (nonlinear_arith);
++    assert(s == 4 * (s / 4) + s % 4) by (nonlinear_arith);
++    assert(n % 3 < 3 && s % 4 < 4) by (nonlinear_arith);
++    assert((4 * groups(n)) / 4 == groups(n)) by (nonlinear_arith);
++    assert((4 * groups(n)) % 4 == 0) by (nonlinear_arith);
++}
++/// Contract-usability lemma only: no trusted executable consumer or target body.
++pub proof fn encoded_prefix_establishes_decode(x: Seq<u8>, before: Seq<u8>, after: Seq<u8>, dst: Seq<u8>, k: nat)
++    requires
++        encode_requires(x, before), encode_post(x, x, before, after, k),
++        represented(dst), dst.len() >= decoded_estimate(k),
++    ensures
++        decode_requires(x, after.subrange(0, k as int), dst),
++        round_trip_decode_requires(after.subrange(0, k as int), dst),
++{
++    assert(after.subrange(0, k as int).len() == k);
++    assert(k <= byte_slice_max());
++    assert(decode_requires(x, after.subrange(0, k as int), dst));
++}
++/// Consume the public universal result using the actual earlier encode witness.
++pub proof fn decoding_recovers_encode_input<E>(x: Seq<u8>, encoded: Seq<u8>, before: Seq<u8>, after: Seq<u8>, result: Result<usize, E>)
++    requires
++        decode_requires(x, encoded, before),
++        round_trip_decode_contract(encoded, encoded, before, after, result),
++    ensures
++        decode_contract(x, encoded, encoded, before, after, result),
++        result.is_ok(),
++        result matches Result::Ok(k) && k as nat == x.len(),
++        after.subrange(0, x.len() as int) == x,
++        suffix_unchanged(before, after, x.len()),
++{
++    assert(decode_contract(x, encoded, encoded, before, after, result));
++}
++
++
++/// Concrete inverse alphabet used only to instantiate checked reconstruction lemmas.
++pub open spec fn inverse_symbol(b: u8) -> u8 {
++    if 65 <= b <= 90 { (b - 65) as u8 }
++    else if 97 <= b <= 122 { (b - 71) as u8 }
++    else if 48 <= b <= 57 { (b + 4) as u8 }
++    else if b == 43 { 62 } else if b == 47 { 63 } else { 255 }
++}
++pub proof fn inverse_alphabet(v: nat)
++    requires v < 64,
++    ensures inverse_symbol(standard_symbol(v)) == v as u8,
++{
++    if v < 26 {} else if v < 52 {} else if v < 62 {} else if v == 62 {} else {}
++}
++
++pub proof fn terminal_injective(t: Seq<u8>, u: Seq<u8>, table: Seq<u8>)
++    requires t.len() <= 3, u.len() <= 3, standard_encoding(t) == standard_encoding(u),
++        table.len() == 256,
++        forall|v: nat| v < 64 ==> table[standard_symbol(v) as int] == v as u8,
++    ensures t == u,
++{
++    use crate::engine::general_purpose::decode_suffix::*;
++    canonical_tail(t, table);
++    canonical_tail(u, table);
++    if t.len() == 0 || u.len() == 0 {
++        assert(t.len() == 0 && u.len() == 0);
++    } else {
++        if t.len() < u.len() {
++            let k = symbol_count(t) as int;
++            assert(standard_encoding(t)[k] == 61);
++            assert(standard_encoding(u)[k] != 61);
++        } else if u.len() < t.len() {
++            let k = symbol_count(u) as int;
++            assert(standard_encoding(u)[k] == 61);
++            assert(standard_encoding(t)[k] != 61);
++        }
++        assert(t.len() == u.len());
++        assert forall|k: int| 0 <= k < 4 implies #[trigger] tail_value(t,k) == tail_value(u,k) by {
++            if k < symbol_count(t) {
++                assert(table[standard_encoding(t)[k] as int] == tail_value(t,k));
++                assert(table[standard_encoding(u)[k] as int] == tail_value(u,k));
++            }
++        }
++        pack_tail(t); pack_tail(u);
++        assert(tail_word(t) == tail_word(u));
++        assert forall|j: int| 0 <= j < t.len() implies t[j] == u[j] by {
++            next_tail_byte(t, j as usize, tail_word(t) << (j * 8));
++            next_tail_byte(u, j as usize, tail_word(u) << (j * 8));
++        }
++    }
++    assert(t =~= u);
++}
++
++/// Canonical encoding determines every byte and the exact padded length.
++/// Stronger than the supported domain: no capacity or decoder-acceptance premise.
++pub proof fn standard_encoding_injective(x: Seq<u8>, y: Seq<u8>)
++    requires standard_encoding(x) == standard_encoding(y),
++    ensures x == y,
++{
++    use crate::engine::general_purpose::decode_suffix::*;
++    use crate::engine::general_purpose::decode::canonical_quad;
++    let table = Seq::new(256, |i: int| inverse_symbol(i as u8));
++    assert forall|v: nat| v < 64 implies table[standard_symbol(v) as int] == v as u8 by {
++        inverse_alphabet(v);
++    }
++    canonical_suffix_image(x); canonical_suffix_image(y);
++    assert(terminal_input_index(x) == terminal_input_index(y));
++    assert(terminal_output_index(x) == terminal_output_index(y));
++    terminal_injective(terminal_tail(x), terminal_tail(y), table);
++    assert(x.len() == y.len());
++    assert forall|j: int| 0 <= j < x.len() implies x[j] == y[j] by {
++        if j < terminal_output_index(x) {
++            let q = j as nat / 3;
++            assert(3 * q + 3 <= x.len());
++            canonical_quad(x, table, q); canonical_quad(y, table, q);
++            assert(0 <= j - 3 * q < 3);
++            let k = j - 3 * q;
++            let chunk = standard_encoding(x).subrange((4*q) as int, (4*q+4) as int);
++            assert(crate::engine::general_purpose::decode::chunk_byte(chunk,table,k) == x[(3*q) as int+k]);
++            assert(crate::engine::general_purpose::decode::chunk_byte(chunk,table,k) == y[(3*q) as int+k]);
++            assert(x[j] == y[j]);
++        } else {
++            assert(terminal_tail(x)[j - terminal_output_index(x)] == x[j]);
++            assert(terminal_tail(y)[j - terminal_output_index(y)] == y[j]);
++        }
++    }
++    assert(x =~= y);
++}
++
++/// Lift the helper's chosen witness into the immutable universal public result.
++pub proof fn chosen_witness_establishes_universal<E>(x: Seq<u8>, encoded: Seq<u8>, encoded_after: Seq<u8>, before: Seq<u8>, after: Seq<u8>, result: Result<usize,E>)
++    requires decode_requires(x, encoded, before),
++        decode_contract(x, encoded, encoded_after, before, after, result),
++    ensures round_trip_decode_contract(encoded, encoded_after, before, after, result),
++{
++    assert forall|y: Seq<u8>| decode_requires(y, encoded, before) implies decode_contract(y, encoded, encoded_after, before, after, result) by {
++        standard_encoding_injective(x,y);
++    }
++}
++
++}
+diff --git a/src/round_trip_spec.rs b/src/round_trip_spec.rs
+new file mode 100644
+index 0000000..d60cfc3
+--- /dev/null
++++ b/src/round_trip_spec.rs
+@@ -0,0 +1,87 @@
++//! Canonical caller-visible meaning for the STANDARD slice round trip.
++//! Ghost-only definitions; no implementation readiness predicates or accepted-error premise.
++use vstd::prelude::*;
++
++verus! {
++/// ceil(n/3), avoiding executable n+2 overflow.
++pub open spec fn groups(n: nat) -> nat { n / 3 + if n % 3 == 0 { 0nat } else { 1nat } }
++pub open spec fn encoded_size(n: nat) -> nat { 4 * groups(n) }
++pub open spec fn decoded_estimate(e: nat) -> nat { 3 * (e / 4 + if e % 4 == 0 { 0nat } else { 1nat }) }
++/// Maximum total byte size of each valid Rust slice, independently of codec acceptance.
++pub open spec fn byte_slice_max() -> nat { isize::MAX as nat }
++pub open spec fn supported(n: nat) -> bool { n <= 3 * (byte_slice_max() / 4) }
++pub open spec fn represented(s: Seq<u8>) -> bool { s.len() <= byte_slice_max() }
++
++/// The STANDARD alphabet, independent of the implementation's lookup tables.
++pub open spec fn standard_symbol(v: nat) -> u8 {
++    if v < 26 { (65 + v) as u8 }
++    else if v < 52 { (97 + v - 26) as u8 }
++    else if v < 62 { (48 + v - 52) as u8 }
++    else if v == 62 { 43u8 } else { 47u8 }
++}
++/// Zero fill only the incomplete final input group; never assume input text/UTF-8.
++pub open spec fn byte_or_zero(x: Seq<u8>, i: nat) -> nat {
++    if i < x.len() { x[i as int] as nat } else { 0nat }
++}
++pub open spec fn encoded_byte(x: Seq<u8>, j: nat) -> u8 {
++    let b = 3 * (j / 4);
++    let a = byte_or_zero(x, b);
++    let c = byte_or_zero(x, b + 1);
++    let d = byte_or_zero(x, b + 2);
++    if j % 4 == 0 { standard_symbol(a / 4) }
++    else if j % 4 == 1 { standard_symbol((a % 4) * 16 + c / 16) }
++    else if j % 4 == 2 {
++        if b + 1 >= x.len() { 61u8 } else { standard_symbol((c % 16) * 4 + d / 64) }
++    } else {
++        if b + 2 >= x.len() { 61u8 } else { standard_symbol(d % 64) }
++    }
++}
++pub open spec fn standard_encoding(x: Seq<u8>) -> Seq<u8> {
++    Seq::new(encoded_size(x.len()), |j: int| encoded_byte(x, j as nat))
++}
++pub open spec fn suffix_unchanged(before: Seq<u8>, after: Seq<u8>, k: nat) -> bool {
++    before.len() == after.len() && k <= after.len()
++    && forall|j: int| k <= j < after.len() ==> after[j] == before[j]
++}
++pub open spec fn encode_requires(x: Seq<u8>, dst: Seq<u8>) -> bool {
++    represented(x) && supported(x.len()) && represented(dst) && dst.len() >= encoded_size(x.len())
++}
++/// Actual target ensures must additionally say result == Ok(written), with no other result permitted.
++pub open spec fn encode_post(x: Seq<u8>, x_after: Seq<u8>, before: Seq<u8>, after: Seq<u8>, written: nat) -> bool {
++    x_after == x && written == encoded_size(x.len())
++    && suffix_unchanged(before, after, written)
++    && after.subrange(0, written as int) == standard_encoding(x)
++}
++/// x is a ghost witness established by the preceding encode result, not an executable input.
++pub open spec fn decode_requires(x: Seq<u8>, encoded: Seq<u8>, dst: Seq<u8>) -> bool {
++    represented(x) && supported(x.len()) && represented(encoded) && represented(dst)
++    && encoded == standard_encoding(x) && dst.len() >= decoded_estimate(encoded.len())
++}
++/// No decoded-byte relation is opaque. Bytes, order, multiplicity, length and frame are explicit.
++pub open spec fn decode_post(x: Seq<u8>, encoded: Seq<u8>, encoded_after: Seq<u8>, before: Seq<u8>, after: Seq<u8>, written: nat) -> bool {
++    encoded_after == encoded && written == x.len()
++    && suffix_unchanged(before, after, written)
++    && after.subrange(0, written as int) == x
++}
++/// Attach to the native Result-returning target: Err is forbidden in this domain.
++pub open spec fn encode_contract<E>(x: Seq<u8>, x_after: Seq<u8>, before: Seq<u8>, after: Seq<u8>, result: Result<usize, E>) -> bool {
++    match result {
++        Result::Ok(written) => encode_post(x, x_after, before, after, written as nat),
++        Result::Err(_) => false,
++    }
++}
++pub open spec fn decode_contract<E>(x: Seq<u8>, encoded: Seq<u8>, encoded_after: Seq<u8>, before: Seq<u8>, after: Seq<u8>, result: Result<usize, E>) -> bool {
++    match result {
++        Result::Ok(written) => decode_post(x, encoded, encoded_after, before, after, written as nat),
++        Result::Err(_) => false,
++    }
++}
++/// Public decoding can quantify the witness instead of adding it as a runtime argument.
++pub open spec fn round_trip_decode_requires(encoded: Seq<u8>, dst: Seq<u8>) -> bool {
++    exists|x: Seq<u8>| decode_requires(x, encoded, dst)
++}
++pub open spec fn round_trip_decode_contract<E>(encoded: Seq<u8>, encoded_after: Seq<u8>, before: Seq<u8>, after: Seq<u8>, result: Result<usize, E>) -> bool {
++    forall|x: Seq<u8>| decode_requires(x, encoded, before) ==> decode_contract(x, encoded, encoded_after, before, after, result)
++}
++
++}
+diff --git a/src/round_trip_use.rs b/src/round_trip_use.rs
+new file mode 100644
+index 0000000..978e0d3
+--- /dev/null
++++ b/src/round_trip_use.rs
+@@ -0,0 +1,73 @@
++//! Source-grounded diagnostic consumers of the public contracts.
++use vstd::prelude::*;
++use crate::{Engine, DecodeSliceError};
++use crate::round_trip_spec::*;
++/// Consume canonical decoder observations from an actual borrowed-slice call.
++#[verus_spec(result =>
++    requires round_trip_decode_requires(input@, old(output)@),
++    ensures round_trip_decode_contract(input@, input@, old(output)@, final(output)@, result),
++)]
++pub fn borrowed_decode_use(input: &[u8], output: &mut [u8]) -> Result<usize, DecodeSliceError> {
++    let engine = crate::engine::general_purpose::STANDARD;
++    proof_decl! { let ghost mut observation = (Seq::<u8>::empty(), Seq::<u8>::empty()); }
++    let result = { proof_with! { => Ghost(observation) } engine.decode_slice(input, output) };
++    proof! { assert(observation.0 == input@); }
++    result
++}
++
++/// Complete source-grounded use with sufficient public-helper-sized destinations.
++#[verus_spec(result =>
++    requires
++        supported(input@.len()),
++        old(encoded_output)@.len() >= encoded_size(input@.len()),
++        old(decoded_output)@.len() >= decoded_estimate(encoded_size(input@.len())),
++    ensures
++        encode_post(input@, input@, old(encoded_output)@, final(encoded_output)@, encoded_size(input@.len())),
++        decode_contract(input@, standard_encoding(input@), standard_encoding(input@),
++            old(decoded_output)@, final(decoded_output)@, result),
++)]
++pub fn helper_sized_round_trip(input: &[u8], encoded_output: &mut [u8], decoded_output: &mut [u8]) -> Result<usize, DecodeSliceError> {
++    let engine = crate::engine::general_purpose::STANDARD;
++    proof! {
++        crate::as_ref_spec::byte_slice_valid(input);
++        crate::as_ref_spec::byte_slice_valid(encoded_output);
++        crate::as_ref_spec::byte_slice_valid(decoded_output);
++        crate::round_trip_proof::capacity_domain(input@.len(), byte_slice_max());
++    }
++    let encode_capacity = crate::encoded_len(input.len(), true).expect("supported encode capacity");
++    let decode_capacity = crate::decoded_len_estimate(encode_capacity);
++    proof! {
++        assert(encode_capacity as nat == encoded_size(input@.len()));
++        assert(decode_capacity as nat == decoded_estimate(encoded_size(input@.len())));
++        assert(encode_capacity <= encoded_output@.len());
++        assert(decode_capacity <= decoded_output@.len());
++        assert(encode_requires(input@, encoded_output@));
++    }
++    proof_decl! {
++        let ghost encode_before = encoded_output@;
++        let ghost decode_before = decoded_output@;
++        let ghost mut encoded_observation = (Seq::<u8>::empty(), Seq::<u8>::empty());
++    }
++    let encode_result = { proof_with! { => Ghost(encoded_observation) } engine.encode_slice(input, encoded_output) };
++    proof! {
++        assert(encoded_observation.0 == input@);
++        assert(encode_contract(input@, input@, encode_before, encoded_output@, encode_result));
++    }
++    let written = match encode_result {
++        Ok(written) => written,
++        Err(_) => return Err(DecodeSliceError::OutputSliceTooSmall),
++    };
++    proof! {
++        assert(encode_post(input@, input@, encode_before, encoded_output@, written as nat));
++        crate::round_trip_proof::encoded_prefix_establishes_decode(input@, encode_before, encoded_output@, decoded_output@, written as nat);
++    }
++    let encoded_prefix = &encoded_output[..written];
++    proof_decl! { let ghost mut decoded_observation = (Seq::<u8>::empty(), Seq::<u8>::empty()); }
++    let decode_result = { proof_with! { => Ghost(decoded_observation) } engine.decode_slice(encoded_prefix, decoded_output) };
++    proof! {
++        assert(decoded_observation.0 == encoded_prefix@);
++        assert(round_trip_decode_contract(encoded_prefix@, encoded_prefix@, decode_before, decoded_output@, decode_result));
++        crate::round_trip_proof::decoding_recovers_encode_input(input@, encoded_prefix@, decode_before, decoded_output@, decode_result);
++    }
++    decode_result
++}
