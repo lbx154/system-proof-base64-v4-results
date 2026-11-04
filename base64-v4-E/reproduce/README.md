@@ -29,9 +29,9 @@ verification results:: 179 verified, 0 errors
 
 ## run.sh 做了什么
 
-1. 拉取 Verus：`tangruize/verus`，提交 `d85f7578`（"support & and | for bool (#3007)"）。
-2. 打上 `verus-marker-metasized.patch`。只改一个文件：`source/rust_verify/src/rust_to_vir_func.rs`。
-3. 编译 Verus。按 Verus 自己的要求，用 Rust 1.98.1、Z3 4.16.0。
+1. 拉取 Verus：`tangruize/verus` 的提交 `d85f7578`（"support & and | for bool (#3007)"）。
+2. **先编译原版 Verus**，vstd 一起编好。按 Verus 自己的要求，用 Rust 1.98.1、Z3 4.16.0。
+3. 打上 `verus-marker-metasized.patch`，**只重新编译 `rust_verify`**。这个补丁只改一个文件：`source/rust_verify/src/rust_to_vir_func.rs`。
 4. 用审计时那条命令验证 `base64-verification/src/lib.rs`：
 
    ```bash
@@ -39,7 +39,17 @@ verification results:: 179 verified, 0 errors
      --cfg 'feature="std"' --cfg 'feature="alloc"' --rlimit 20
    ```
 
-   就是 `--no-default-features --features std` 这个配置，直接把 crate 根交给 Verus，没有经过 Cargo。
+   对应的配置是 `--no-default-features --features std`。这条命令把 crate 根直接交给 Verus，不经过 Cargo。
+
+## 一个要注意的地方：打了补丁的 Verus 编不出自己的 vstd
+
+第 2、3 步的顺序不能换。如果先打补丁再完整编译，Verus 本体能编过，但 vstd 会报 52 个 `external_trait_specification trait bound mismatch` 错误。
+
+原因是补丁让 Verus 在检查 trait 规约时去掉了一个合成出来的 `MetaSized` 约束。可是 vstd 里的规约是按原来的规则写的，在新规则下就对不上了。
+
+团队当时就是先编原版、再只重编 `rust_verify`。所以 179/0 实际是"打过补丁的编译器 + 原版编译器编出的 vstd"这个组合跑出来的。团队的报告锁定了这份 vstd 的指纹，但没有提到它在补丁下编不出来。
+
+我们的理解是：这个检查只管 Verus 前端接不接收一个 trait 规约，不改变证明的含义。但这只是我们的判断。这个补丁算不算一个可以接受的 Verus 修改，需要懂 Verus 的人来判断。
 
 ## 源码从哪来
 
@@ -49,6 +59,8 @@ verification results:: 179 verified, 0 errors
 
 ## 我们这边的核对
 
-把这个目录里的 `base64-verification/` 单独拷到一个空目录，用同一个打过补丁的 Verus 跑，结果是 179 verified, 0 errors。
+我们在一个全新的环境里从零跑了 `run.sh`：全新的 Rust 安装，重新从 GitHub 拉 Verus 并编译。结果是 **179 verified, 0 errors**。
 
-`run.sh` 从零拉取并编译 Verus 的整条路径，我们还没有在一台干净的机器上完整跑过。如果卡住了，请开 issue。
+编出来的 vstd 文件和团队那份字节上不完全一样，但源码和编译步骤是同一套。
+
+如果在你的机器上跑不通，请开 issue。

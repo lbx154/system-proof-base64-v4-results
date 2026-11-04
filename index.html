@@ -17878,7 +17878,7 @@ How to run this here: use the system_proof skill pack (read its SKILL.md first; 
   <pre><code>git clone https://github.com/lbx154/system-proof-base64-v4-results
 cd system-proof-base64-v4-results/base64-v4-E/reproduce
 ./run.sh   # 期望最后一行：verification results:: 179 verified, 0 errors</code></pre>
-  <p class="small">脚本拉取 Verus（tangruize/verus @ d85f7578），打上 28 行补丁，用 Rust 1.98.1 / Z3 4.16.0 编译，再对完整源码跑审计时的同一条命令。第一次约 15–30 分钟。</p>
+  <p class="small">脚本拉取 Verus（tangruize/verus @ d85f7578），先用 Rust 1.98.1 / Z3 4.16.0 编译原版和 vstd，再打上 28 行补丁、只重编 rust_verify（和团队当时的做法一样：打了补丁的 Verus 编不出自己的 vstd），最后对完整源码跑审计时的同一条命令。我们在全新环境里从零跑过，得到 179/0。第一次约 15–30 分钟。</p>
   <h2>复现 C 组的审计重放</h2>
   <p>在原机器上运行，工具链在验证 checkout 的 <code>.tools/</code> 下。这正是插件审计时跑的命令：</p>
   <pre><code>C=/fastdata/v-boxiuli/noah/exp/tsC

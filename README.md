@@ -45,6 +45,8 @@
 1. **那个 28 行的 Verus 补丁**：[`base64-v4-E/trust/verus-t7-marker-metasized.patch`](base64-v4-E/trust/verus-t7-marker-metasized.patch)
    Verus 在翻译 base64 的 trait 时会卡住。这个补丁去掉了一个 Verus 自己合成出来的多余约束，真实的约束都保留着。第一版补丁的范围写错了，团队自己发现后重做了一版。它对不对，需要懂 Verus 的人看一眼。评估记录在 [`ASSESSMENT-t7.md`](base64-v4-E/trust/ASSESSMENT-t7.md)。
 
+   还有一个团队没有发现的问题：**打了这个补丁的 Verus 编不出它自己的 vstd**（报 52 个 trait 约束不匹配的错误）。179/0 用的是原版 Verus 编出来的 vstd。详见 [复现说明](base64-v4-E/reproduce/README.md#一个要注意的地方打了补丁的-verus-编不出自己的-vstd)。
+
 2. **为了让 Verus 能处理，验证用的代码做了一些改写**：[完整差异](base64-v4-E/proof/verification-vs-production.patch)
    比如：
    - 把几个 helper 调用就地展开；
@@ -101,9 +103,10 @@ cd system-proof-base64-v4-results/base64-v4-E/reproduce
 
 `run.sh` 会做这几件事：
 1. 拉取 Verus（`tangruize/verus` 的 `d85f7578`）；
-2. 打上那个 28 行补丁；
-3. 编译 Verus；
-4. 对**完整的** base64 源码跑验证。
+2. 编译 Verus（先编原版和 vstd，再打补丁、只重编 `rust_verify`，和团队当时的做法一样）；
+3. 对**完整的** base64 源码跑验证。
+
+我们在全新的环境里从零跑过一遍，结果是 179/0。
 
 第一次跑大约要 15–30 分钟，大部分时间花在编译 Verus 上。
 
