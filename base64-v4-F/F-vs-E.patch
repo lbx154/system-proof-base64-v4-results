@@ -1,0 +1,267 @@
+diff --git a/base64-v4-E/reproduce/base64-verification/Cargo.toml b/base64-v4-F/reproduce/base64-verification/Cargo.toml
+index 23d7727..e48643f 100644
+--- a/base64-v4-E/reproduce/base64-verification/Cargo.toml
++++ b/base64-v4-F/reproduce/base64-verification/Cargo.toml
+@@ -61,7 +61,7 @@ debug = true
+ opt-level = 3
+ 
+ [dependencies]
+-vstd = { version = "0.0.0-2026-09-20-0158", path = "../verus/source/vstd", default-features = false, features = ["alloc"] }
++vstd = { version = "0.0.0-2026-09-20-0158", path = "../../../base64-v4-E/reproduce/verus/source/vstd", default-features = false, features = ["alloc"] }
+ 
+ [package.metadata.verus]
+ verify = true
+diff --git a/base64-v4-E/reproduce/base64-verification/src/engine/general_purpose/decode.rs b/base64-v4-F/reproduce/base64-verification/src/engine/general_purpose/decode.rs
+index ab07484..36d55de 100644
+--- a/base64-v4-E/reproduce/base64-verification/src/engine/general_purpose/decode.rs
++++ b/base64-v4-F/reproduce/base64-verification/src/engine/general_purpose/decode.rs
+@@ -143,6 +143,7 @@ pub(crate) fn decode_helper(
+         assert(input_complete_nonterminal_quads_len as nat == super::decode_suffix::terminal_input_index(x));
+         assert(input_complete_nonterminal_quads_len % 4 == 0);
+         reveal(decoder_image);
++        reveal(canonical_quads_use);
+         assert(canonical_quads_use(x,input@,decode_table@,input_complete_nonterminal_quads_len as nat));
+       }
+     }
+@@ -224,10 +225,99 @@ pub(crate) proof fn image_window_byte(x: Seq<u8>, e: Seq<u8>, table: Seq<u8>, ii
+ }
+ 
+ verus! {
++#[verifier::opaque]
+ pub(crate) open spec fn canonical_quads_use(x: Seq<u8>, input: Seq<u8>, table: Seq<u8>, end: nat) -> bool {
+     decoder_image(x,input)
+         && end <= crate::engine::general_purpose::decode_suffix::terminal_input_index(x)
+         && forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8
++}
++// Keep canonical encoding expansion and per-chunk facts out of the loop queries.
++proof fn canonical_quads_bounds(x: Seq<u8>, input: Seq<u8>, table: Seq<u8>, end: nat)
++    requires canonical_quads_use(x,input,table,end),
++    ensures decoder_image(x,input), end / 4 * 3 <= x.len(),
++        end <= super::decode_suffix::terminal_input_index(x),
++        forall|v: nat| v < 64 ==> table[crate::round_trip_spec::standard_symbol(v) as int] == v as u8,
++{
++    reveal(canonical_quads_use);
++    reveal(decoder_image);
++    super::decode_suffix::canonical_suffix_image(x);
++}
++proof fn prepare_decode_32(x: Seq<u8>, input: Seq<u8>, decode_table: Seq<u8>, end: nat,
++    input_index: usize, output_base: usize, chunk: Seq<u8>)
++    requires canonical_quads_use(x,input,decode_table,end), decode_table.len() == 256,
++        input_index % 4 == 0, input_index + 32 <= end <= input.len(),
++        output_base == input_index / 4 * 3,
++        chunk == input.subrange(input_index as int,input_index as int+32),
++    ensures forall|i: int| 0 <= i < 32 ==> #[trigger] decode_table[chunk[i] as int] < 64,
++        forall|j: int| 0 <= j < 6 ==> #[trigger] chunk_byte(chunk.subrange(0,8),decode_table,j) == x[output_base as int+0+j],
++        forall|j: int| 0 <= j < 6 ==> #[trigger] chunk_byte(chunk.subrange(8,16),decode_table,j) == x[output_base as int+6+j],
++        forall|j: int| 0 <= j < 6 ==> #[trigger] chunk_byte(chunk.subrange(16,24),decode_table,j) == x[output_base as int+12+j],
++        forall|j: int| 0 <= j < 6 ==> #[trigger] chunk_byte(chunk.subrange(24,32),decode_table,j) == x[output_base as int+18+j],
++{
++    hide(chunk_byte);
++    canonical_quads_bounds(x,input,decode_table,end);
++    reveal(canonical_quads_use);
++    image_window(x,input,decode_table,input_index as nat,2);
++    image_window(x,input,decode_table,(input_index+8) as nat,2);
++    image_window(x,input,decode_table,(input_index+16) as nat,2);
++    image_window(x,input,decode_table,(input_index+24) as nat,2);
++    assert(chunk.subrange(0,8) =~= input.subrange(input_index as int,(input_index+8) as int));
++    assert(chunk.subrange(8,16) =~= input.subrange((input_index+8) as int,(input_index+16) as int));
++    assert(chunk.subrange(16,24) =~= input.subrange((input_index+16) as int,(input_index+24) as int));
++    assert(chunk.subrange(24,32) =~= input.subrange((input_index+24) as int,(input_index+32) as int));
++    assert forall|i: int| 0 <= i < 32 implies decode_table[chunk[i] as int] < 64 by {
++        if i < 8 { assert(decode_table[input[input_index as int+i] as int] < 64); }
++        else if i < 16 { assert(decode_table[input[(input_index+8) as int+(i-8)] as int] < 64); }
++        else if i < 24 { assert(decode_table[input[(input_index+16) as int+(i-16)] as int] < 64); }
++        else { assert(decode_table[input[(input_index+24) as int+(i-24)] as int] < 64); }
++    }
++    assert(input_index / 4 * 3 == output_base);
++    assert forall|j: int| 0 <= j < 6 implies chunk_byte(chunk.subrange(0,8),decode_table,j) == x[output_base as int+j] by {
++        image_window_byte(x,input,decode_table,input_index as nat,2,j);
++        assert(chunk_byte(input.subrange(input_index as int,(input_index+8) as int),decode_table,j) == x[(3*(input_index/4)) as int+j]);
++    }
++    assert forall|j: int| 0 <= j < 6 implies chunk_byte(chunk.subrange(8,16),decode_table,j) == x[output_base as int+6+j] by {
++        image_window_byte(x,input,decode_table,(input_index+8) as nat,2,j);
++        assert(chunk_byte(input.subrange((input_index+8) as int,(input_index+16) as int),decode_table,j) == x[(3*((input_index+8)/4)) as int+j]);
++    }
++    assert forall|j: int| 0 <= j < 6 implies chunk_byte(chunk.subrange(16,24),decode_table,j) == x[output_base as int+12+j] by {
++        image_window_byte(x,input,decode_table,(input_index+16) as nat,2,j);
++        assert(chunk_byte(input.subrange((input_index+16) as int,(input_index+24) as int),decode_table,j) == x[(3*((input_index+16)/4)) as int+j]);
++    }
++    assert forall|j: int| 0 <= j < 6 implies chunk_byte(chunk.subrange(24,32),decode_table,j) == x[output_base as int+18+j] by {
++        image_window_byte(x,input,decode_table,(input_index+24) as nat,2,j);
++        assert(chunk_byte(input.subrange((input_index+24) as int,(input_index+32) as int),decode_table,j) == x[(3*((input_index+24)/4)) as int+j]);
++    }
++
++
++
++}
++
++proof fn prepare_decode_4(x: Seq<u8>, input: Seq<u8>, decode_table: Seq<u8>, end: nat,
++    input_index: usize, output_base: usize, chunk: Seq<u8>)
++    requires canonical_quads_use(x,input,decode_table,end), decode_table.len() == 256,
++        input_index % 4 == 0, input_index + 4 <= end <= input.len(),
++        output_base == input_index / 4 * 3,
++        chunk == input.subrange(input_index as int,input_index as int+4),
++    ensures forall|i: int| 0 <= i < 4 ==> #[trigger] decode_table[chunk[i] as int] < 64,
++        forall|j: int| 0 <= j < 3 ==> #[trigger] chunk_byte(chunk,decode_table,j) == x[output_base as int+j],
++{
++    hide(chunk_byte);
++    canonical_quads_bounds(x,input,decode_table,end);
++    reveal(canonical_quads_use);
++    image_window(x,input,decode_table,input_index as nat,1);
++    assert forall|i: int| 0 <= i < 4 implies decode_table[chunk[i] as int] < 64 by {
++        assert(decode_table[input[input_index as int+i] as int] < 64);
++    }
++    assert(input_index / 4 * 3 == output_base);
++    assert forall|j: int| 0 <= j < 3 implies chunk_byte(chunk,decode_table,j) == x[output_base as int+j] by {
++        let ii = input_index as nat;
++        assert(chunk_byte(input.subrange(ii as int,(ii+4) as int),decode_table,j) == x[(3*(ii/4)) as int+j]);
++        assert(chunk =~= input.subrange(ii as int, (ii+4) as int));
++    }
++
++
++
+ }
+ #[verifier::verify]
+ #[verus_spec(result =>
+@@ -269,33 +359,19 @@ fn decode_complete_quads(
+     let unrolled_loop_len = quads_len - quads_len % UNROLLED_INPUT_CHUNK_SIZE;
+     let input_unrolled_loop_end = input_index_start + unrolled_loop_len;
+ 
+-    proof {
+-      if canonical {
+-        reveal(canonical_quads_use);
+-        reveal(decoder_image);
+-        crate::engine::general_purpose::decode_suffix::canonical_suffix_image(x);
+-        reveal(decoder_image);
+-        assert(decoder_image(x,input@));
+-    
+-      }
+-}
+     let ghost initial_output = output@;
+     let mut chunk_index: usize = 0;
+     while chunk_index < unrolled_loop_len / UNROLLED_INPUT_CHUNK_SIZE
+         invariant
+             canonical == canonical_quads_use(x,input@,decode_table@,input_index_end as nat),
+-            canonical ==> decoder_image(x,input@),
+             input_index_start <= input_index_end,
+             input_index_end <= input@.len(),
+-            canonical ==> input_index_end / 4 * 3 <= x.len(),
+             input_index_end / 4 * 3 <= output@.len(),
+             input_index_start % 4 == 0, input_index_end % 4 == 0,
+-            canonical ==> input_index_end as nat <= crate::engine::general_purpose::decode_suffix::terminal_input_index(x),
+             output_index_start == input_index_start / 4 * 3,
+             output@.len() == initial_output.len(),
+             old(output)@ == initial_output,
+ 
+-            canonical ==> (forall|v: nat| v < 64 ==> decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8),
+             UNROLLED_INPUT_CHUNK_SIZE == 32, UNROLLED_OUTPUT_CHUNK_SIZE == 24,
+             quads_len == input_index_end - input_index_start,
+             unrolled_loop_len == quads_len - quads_len % 32,
+@@ -305,47 +381,12 @@ fn decode_complete_quads(
+             forall|j: int| 0 <= j < output@.len() && (j < output_index_start || j >= output_index_start + chunk_index * 24) ==> output@[j] == initial_output[j],
+         decreases unrolled_loop_len / 32 - chunk_index,
+     {
+-        let chunk = &input[input_index_start + chunk_index * 32..input_index_start + (chunk_index + 1) * 32];
+         let input_index = input_index_start + chunk_index * UNROLLED_INPUT_CHUNK_SIZE;
++        let chunk = &input[input_index..input_index + UNROLLED_INPUT_CHUNK_SIZE];
+         let output_base = output_index_start + chunk_index * UNROLLED_OUTPUT_CHUNK_SIZE;
+-        proof {
+-      if canonical {
+-
+-            image_window(x,input@,decode_table@,input_index as nat,2);
+-            image_window(x,input@,decode_table@,(input_index+8) as nat,2);
+-            image_window(x,input@,decode_table@,(input_index+16) as nat,2);
+-            image_window(x,input@,decode_table@,(input_index+24) as nat,2);
+-            assert(chunk@.subrange(0,8) =~= input@.subrange(input_index as int,(input_index+8) as int));
+-            assert(chunk@.subrange(8,16) =~= input@.subrange((input_index+8) as int,(input_index+16) as int));
+-            assert(chunk@.subrange(16,24) =~= input@.subrange((input_index+16) as int,(input_index+24) as int));
+-            assert(chunk@.subrange(24,32) =~= input@.subrange((input_index+24) as int,(input_index+32) as int));
+-            assert forall|i: int| 0 <= i < 32 implies decode_table@[chunk@[i] as int] < 64 by {
+-                if i < 8 { assert(decode_table@[input@[input_index as int+i] as int] < 64); }
+-                else if i < 16 { assert(decode_table@[input@[(input_index+8) as int+(i-8)] as int] < 64); }
+-                else if i < 24 { assert(decode_table@[input@[(input_index+16) as int+(i-16)] as int] < 64); }
+-                else { assert(decode_table@[input@[(input_index+24) as int+(i-24)] as int] < 64); }
+-            }
+-            assert(input_index / 4 * 3 == output_base);
+-            assert forall|j: int| 0 <= j < 6 implies chunk_byte(chunk@.subrange(0,8),decode_table@,j) == x[output_base as int+j] by {
+-                image_window_byte(x,input@,decode_table@,input_index as nat,2,j);
+-                assert(chunk_byte(input@.subrange(input_index as int,(input_index+8) as int),decode_table@,j) == x[(3*(input_index/4)) as int+j]);
+-            }
+-            assert forall|j: int| 0 <= j < 6 implies chunk_byte(chunk@.subrange(8,16),decode_table@,j) == x[output_base as int+6+j] by {
+-                image_window_byte(x,input@,decode_table@,(input_index+8) as nat,2,j);
+-                assert(chunk_byte(input@.subrange((input_index+8) as int,(input_index+16) as int),decode_table@,j) == x[(3*((input_index+8)/4)) as int+j]);
+-            }
+-            assert forall|j: int| 0 <= j < 6 implies chunk_byte(chunk@.subrange(16,24),decode_table@,j) == x[output_base as int+12+j] by {
+-                image_window_byte(x,input@,decode_table@,(input_index+16) as nat,2,j);
+-                assert(chunk_byte(input@.subrange((input_index+16) as int,(input_index+24) as int),decode_table@,j) == x[(3*((input_index+16)/4)) as int+j]);
+-            }
+-            assert forall|j: int| 0 <= j < 6 implies chunk_byte(chunk@.subrange(24,32),decode_table@,j) == x[output_base as int+18+j] by {
+-                image_window_byte(x,input@,decode_table@,(input_index+24) as nat,2,j);
+-                assert(chunk_byte(input@.subrange((input_index+24) as int,(input_index+32) as int),decode_table@,j) == x[(3*((input_index+24)/4)) as int+j]);
+-            }
+-
+-        
+-      }
+-}
++        proof { if canonical {
++            prepare_decode_32(x,input@,decode_table@,input_index_end as nat,input_index,output_base,chunk@);
++        } }
+         let chunk_output = &mut output[output_base..output_base + UNROLLED_OUTPUT_CHUNK_SIZE];
+ 
+         decode_chunk_8(
+@@ -390,18 +431,14 @@ fn decode_complete_quads(
+     while chunk_index < (input_index_end - input_unrolled_loop_end) / 4
+         invariant
+             canonical == canonical_quads_use(x,input@,decode_table@,input_index_end as nat),
+-            canonical ==> decoder_image(x,input@),
+             input_index_start <= input_index_end,
+             input_index_end <= input@.len(),
+-            canonical ==> input_index_end / 4 * 3 <= x.len(),
+             input_index_end / 4 * 3 <= output@.len(),
+             input_index_start % 4 == 0, input_index_end % 4 == 0,
+-            canonical ==> input_index_end as nat <= crate::engine::general_purpose::decode_suffix::terminal_input_index(x),
+             output_index_start == input_index_start / 4 * 3,
+             output@.len() == initial_output.len(),
+             old(output)@ == initial_output,
+ 
+-            canonical ==> (forall|v: nat| v < 64 ==> decode_table@[crate::round_trip_spec::standard_symbol(v) as int] == v as u8),
+             quads_len == input_index_end - input_index_start,
+             unrolled_loop_len == quads_len - quads_len % 32,
+             input_unrolled_loop_end == input_index_start + unrolled_loop_len,
+@@ -411,30 +448,17 @@ fn decode_complete_quads(
+             forall|j: int| 0 <= j < output@.len() && (j < output_index_start || j >= output_after_unroll_start + chunk_index * 3) ==> output@[j] == initial_output[j],
+         decreases (input_index_end - input_unrolled_loop_end) / 4 - chunk_index,
+     {
+-        let chunk = &input[input_unrolled_loop_end + chunk_index * 4..input_unrolled_loop_end + (chunk_index + 1) * 4];
++        let input_index = input_unrolled_loop_end + chunk_index * 4;
++        let chunk = &input[input_index..input_index + 4];
+         let output_base = output_after_unroll_start + chunk_index * 3;
+-        proof {
+-      if canonical {
+-
+-            image_window(x,input@,decode_table@,(input_unrolled_loop_end+chunk_index*4) as nat,1);
+-            assert forall|i: int| 0 <= i < 4 implies decode_table@[chunk@[i] as int] < 64 by {
+-                assert(decode_table@[input@[(input_unrolled_loop_end+chunk_index*4) as int+i] as int] < 64);
+-            }
+-            assert((input_unrolled_loop_end+chunk_index*4) / 4 * 3 == output_base);
+-            assert forall|j: int| 0 <= j < 3 implies chunk_byte(chunk@,decode_table@,j) == x[output_base as int+j] by {
+-                let ii = (input_unrolled_loop_end+chunk_index*4) as nat;
+-                assert(chunk_byte(input@.subrange(ii as int,(ii+4) as int),decode_table@,j) == x[(3*(ii/4)) as int+j]);
+-                assert(chunk@ =~= input@.subrange(ii as int, (ii+4) as int));
+-            }
+-
+-        
+-      }
+-}
++        proof { if canonical {
++            prepare_decode_4(x,input@,decode_table@,input_index_end as nat,(input_unrolled_loop_end+chunk_index*4) as usize,output_base,chunk@);
++        } }
+         let chunk_output = &mut output[output_base..output_base + 3];
+ 
+         decode_chunk_4(
+             chunk,
+-            input_unrolled_loop_end + chunk_index * 4,
++            input_index,
+             decode_table,
+             chunk_output,
+         )?;

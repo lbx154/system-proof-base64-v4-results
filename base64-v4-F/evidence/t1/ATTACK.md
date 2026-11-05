@@ -1,0 +1,24 @@
+# Specification attack decision and fresh source-bound test
+
+Live uncertainty: whether public owned generic call success can be unconditional merely because `AsRef<[u8]>` is implemented, or whether E's conversion/cleanup conditions are necessary and the borrowed caller genuinely discharges them. This matters to entire-call success, not to permitting codec errors. The current request preserves E's theorem, and the Reviewer independently confirms its actual conditional meaning.
+
+All three direct routes assessed:
+
+1. **analyze-function**: direct AsRef/caller frame analysis could address the single conversion relation, but the pack says its required Copilot route is unavailable in this environment. Recorded operational blocker; no fabricated invocation. A one-function analysis would also miss recursive destruction after codec completion. Source inspection of `as_ref_bytes` and actual wrapper/owned-use bodies establishes one invocation, observed bytes and the exact conversion relation, without assuming stability of repeated calls.
+2. **analyze-protocol**: selected because conversion -> codec write -> cleanup -> delivered Result is the live lifecycle alternative. Full original goal plus source locations, dependent caller claim, scope and observation boundary are in `attack/protocol-request.json`. Attempted `analyze-protocol prepare ... --source "$PWD" --out .system-proof/t1/attack/protocol-run` failed, exit 127, executable absent (`protocol-blocker.log`, `.exit`). The missing upstream workflow source could not be fetched (`../clone.log`). This is an operational blocker, NOT a completed specialist analysis. A substantive direct production execution follows below rather than counting preparation as analysis.
+3. **specdet analyze**: not selected. Exact byte/count and both destination suffix observations are explicit in `encode_post`, `decode_post` and Result contracts; Err is false under lawful capacities. `round_trip_decode_requires` has an existential input-image witness and its contract quantifies every such witness; `standard_encoding_injective` connects them. The generic environment predicates intentionally bound arbitrary caller effects and are not an output-uniqueness question. The stronger checked actual caller consumes the relevant public guarantees. Native underconstraint search would not answer whether destruction actually panics or arbitrary caller code is total. No current unresolved count/frame alternative warrants installing a second analyzer. This is a source-based decision, not a claim that specdet ran or proved completeness.
+
+## Substantive fallback protocol attack, against original production
+
+Question: can `encode_slice` or `decode_slice` finish the correct byte/count/suffix work but fail to deliver Result solely because owned T's complete cleanup panics? `attack/lifecycle.rs` implements AsRef with a counted single conversion and a controllably panicking Drop. It invokes the actual committed library, not a copied codec or annotated diagnostic implementation. Builds use the same Rust 1.98.1 and std+alloc/no-SIMD features:
+
+```bash
+source .system-proof/t1/adapter/env.sh
+rustc .production/src/lib.rs --crate-name base64 --crate-type rlib --edition 2021 --cfg 'feature="std"' --cfg 'feature="alloc"' -o .system-proof/t1/attack/libbase64.rlib
+rustc .system-proof/t1/attack/lifecycle.rs --edition 2021 --extern base64=.system-proof/t1/attack/libbase64.rlib -o .system-proof/t1/attack/lifecycle
+.system-proof/t1/attack/lifecycle
+```
+
+`attack/build.log` and `attack/lifecycle.log` retain execution. All four assertions pass: encode/decode crossed with normal/panicking Drop. For f -> Zg== and Zg== -> f, each makes exactly one conversion and writes the expected prefix, leaving the sentinel suffix unchanged. Normal Drop delivers the successful count. Panicking Drop prevents Result delivery despite completed correct codec work. This concretely refutes unrestricted generic whole-call success and supports keeping the explicit cleanup completion condition. It does not demonstrate a codec defect or permit a codec Err/panic in lawful calls. Arbitrary user conversion can likewise fail to return; its totality is an environmental condition, not inferred from trait membership.
+
+The selected reading preserves arbitrary byte sequences, the full represented length domain, exact counts/prefixes, both suffix frames and mandatory codec success. Set aside unconditional arbitrary-owned-code completion (counterexample), changing the production API (out of scope), and narrowing to borrowed input only (unnecessarily loses generic coverage). Borrowed slice conversion and cleanup conditions reduce to true. For generic T, named environmental/TCB predicates carry completion/effect meaning; no totality proof or purity across repeated conversions is claimed. The independent Reviewer must judge this meaning and the fallback attack's sufficiency.

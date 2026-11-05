@@ -1,0 +1,23 @@
+$ git rev-parse HEAD
+d9ce0dea622ff80eacb736f95e9488cf1eaa06f4
+exit 0
+$ git -C .production rev-parse HEAD
+d9ce0dea622ff80eacb736f95e9488cf1eaa06f4
+exit 0
+$ git -C .production status --porcelain
+exit 0
+$ git diff --stat
+ Cargo.lock                                  |  71 ++++
+ Cargo.toml                                  |  11 +-
+ src/alphabet.rs                             | 114 ++++--
+ src/decode.rs                               |  19 +-
+ src/encode.rs                               |  42 +-
+ src/engine/general_purpose/decode.rs        | 537 +++++++++++++++++++++++++-
+ src/engine/general_purpose/decode_suffix.rs | 305 ++++++++++++++-
+ src/engine/general_purpose/mod.rs           | 576 ++++++++++++++++++++++++----
+ src/engine/mod.rs                           | 228 ++++++++---
+ src/lib.rs                                  |  30 +-
+ 10 files changed, 1745 insertions(+), 188 deletions(-)
+exit 0
+$ git diff --no-index .system-proof/t2/reorganized-maintenance.rs src/engine/general_purpose/decode.rs
+exit 0

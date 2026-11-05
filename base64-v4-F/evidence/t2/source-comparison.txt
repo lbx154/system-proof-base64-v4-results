@@ -1,0 +1,2 @@
+Compared archived E Cargo/source files to registered candidate. Changed files:
+src/engine/general_purpose/decode.rs

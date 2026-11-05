@@ -78,9 +78,17 @@ pre { margin: 0; padding: 12px 14px; background: var(--code-bg); border-top: 1px
   <h1>base64-v4 证明审阅：Argus A、C、E 组</h1>
   <p class="lede">三组都用 TypeScript 版 Argus 加 system_proof 技能包，后端是 codex，模型是 gpt-6.1-sol，用 Verus 证明 base64 crate 的 STANDARD 编解码往返。本页把三组的结论、规约、证明、Verus 补丁、源码差异和重放日志全文列出，请评审。原始记录（Argus 的每封信、每条命令）在 <a href="https://github.com/lbx154/system-proof-base64-v4-results" target="_blank" rel="noopener">lbx154/system-proof-base64-v4-results</a>。</p>
   <nav class="toc" aria-label="目录">
-    <a href="#verdict">结论</a><a href="#review">请重点审</a><a href="#e">E 组材料</a><a href="#c">C 组材料</a><a href="#a">A 组材料</a><a href="#process">过程与不公平之处</a><a href="#repro">复现</a>
+    <a href="#f">F 组（最新）</a><a href="#verdict">结论</a><a href="#review">请重点审</a><a href="#e">E 组材料</a><a href="#c">C 组材料</a><a href="#a">A 组材料</a><a href="#process">过程与不公平之处</a><a href="#repro">复现</a>
   </nav>
 </header>
+
+<section id="f">
+  <h2>F 组：E 的证明重组后，默认设置下通过</h2>
+  <p>瑞泽审 E 时指出：证明要把 rlimit 调到 20 才能过，说明它太脆，是"报一个错修一个错"堆出来的。F 从 E 的证明出发重新组织，只改了 <code>src/engine/general_purpose/decode.rs</code>：两个解码循环每一步要用的事实拆成 3 个小引理，一个定义改成不透明、在用到的地方展开。定理没变，生产代码没动。</p>
+  <p><strong>结果：Verus 默认设置下 182 项通过、0 错误</strong>（179 + 3 个新引理）。32 字节循环的开销从超过上限（3000 万单位）降到 1096 万，4 字节循环降到 644 万。花了 21 分钟、$3.99，没人插手。我在干净目录里重跑过，结果相同。</p>
+  <p>要注意两点：最终验证的代码里多了一处等价改写（维护性测试用的那处下标计算改写）；那个维护性测试在 E 和 F 上都不用改证明，所以说明不了返工更少。</p>
+  <p class="small"><a href="https://github.com/lbx154/system-proof-base64-v4-results/blob/main/base64-v4-F/README.md" target="_blank" rel="noopener">F 组说明</a> · <a href="https://github.com/lbx154/system-proof-base64-v4-results/blob/main/base64-v4-F/final-report.md" target="_blank" rel="noopener">最终报告</a> · <a href="https://github.com/lbx154/system-proof-base64-v4-results/blob/main/base64-v4-F/F-vs-E.patch" target="_blank" rel="noopener">相对 E 的全部改动</a> · <a href="https://github.com/lbx154/system-proof-base64-v4-results/tree/main/base64-v4-F/reproduce" target="_blank" rel="noopener">完整源码与复现脚本</a></p>
+</section>
 
 <section id="verdict">
   <h2>结论</h2>

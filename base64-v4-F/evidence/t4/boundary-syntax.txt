@@ -1,0 +1,14 @@
+src/encode.rs:71:#[verifier::external_body]
+src/round_trip_spec.rs:22:/// Zero fill only the incomplete final input group; never assume input text/UTF-8.
+src/alphabet.rs:253:        broadcast use vstd::string::group_string_axioms;
+src/alphabet.rs:465:    broadcast use vstd::string::group_string_axioms;
+src/panic_spec.rs:7:pub assume_specification<T, U> [core::panicking::assert_failed]
+src/as_ref_spec.rs:37:#[verifier::external_body]
+src/as_ref_spec.rs:46:#[verifier::external_body]
+src/read/decoder.rs:311:                // to assume that these last few symbols are, in fact, valid (i.e. must be 2-4 b64
+src/engine/mod.rs:175:    #[verifier::external_body]
+src/engine/mod.rs:216:    #[verifier::external_body]
+src/engine/mod.rs:352:    #[verifier::external_body]
+src/engine/mod.rs:411:    #[verifier::external_body]
+src/engine/mod.rs:514:    #[verifier::external_body]
+src/engine/general_purpose/mod.rs:180:#[verifier::external_body]

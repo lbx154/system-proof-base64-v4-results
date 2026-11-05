@@ -1,0 +1,1 @@
+Compared every archived regular file with scratch: only src/engine/general_purpose/decode.rs differs. Its exact diff is executable.patch. No proof repairs.
